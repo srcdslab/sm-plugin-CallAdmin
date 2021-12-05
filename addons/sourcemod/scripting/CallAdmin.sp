@@ -4,7 +4,7 @@
 #include <Discord>
 #include <clientprefs>
 
-#define PLUGIN_VERSION "1.0"
+#define PLUGIN_VERSION "1.1"
 
 #pragma newdecls required
 
@@ -21,7 +21,7 @@ bool g_bLate = false;
 public Plugin myinfo = 
 {
 	name = "CallAdmin",
-	author = "inGame, maxime1907",
+	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
 	version = PLUGIN_VERSION,
 	url = "https://nide.gg"
@@ -168,10 +168,13 @@ public Action Command_CallAdmin(int client, int args)
 	char sAuth[32], ServerName[64];
 	GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth), true);
 
+	char currentMap[PLATFORM_MAX_PATH];
+	GetCurrentMap(currentMap, sizeof(currentMap));
+
 	GetConVarString(g_cvServerName, ServerName, sizeof(ServerName));
 	
 	// Generate discord message
-	Format(sMessageDiscord, sizeof(sMessageDiscord), "@here Player **%N** [ *%s* ] just called admin with reason: ```%s```", client,  sAuth, sMessageDiscord);
+	Format(sMessageDiscord, sizeof(sMessageDiscord), "@here Player **%N** [ *%s* ] just called admin on ***%S*** with reason: ```%s```", client,  sAuth, currentMap, sMessageDiscord);
 
 	if (!Discord_SendMessage(sWebhook, sMessageDiscord))
 	{
