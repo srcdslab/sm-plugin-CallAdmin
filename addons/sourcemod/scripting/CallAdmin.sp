@@ -174,7 +174,7 @@ public Action Command_CallAdmin(int client, int args)
 	GetConVarString(g_cvServerName, ServerName, sizeof(ServerName));
 	
 	// Generate discord message
-	Format(sMessageDiscord, sizeof(sMessageDiscord), "@here Player **%N** [ *%s* ] just called admin on ***%S*** with reason: ```%s```", client,  sAuth, currentMap, sMessageDiscord);
+	Format(sMessageDiscord, sizeof(sMessageDiscord), "@here Player **%N** [ *%s* ] just called admin on ***%s*** with reason: ```%s```", client,  sAuth, currentMap, sMessageDiscord);
 
 	if (!Discord_SendMessage(sWebhook, sMessageDiscord))
 	{
