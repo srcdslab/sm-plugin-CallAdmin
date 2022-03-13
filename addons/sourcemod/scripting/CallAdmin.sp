@@ -4,7 +4,7 @@
 #include <Discord>
 #include <clientprefs>
 
-#define PLUGIN_VERSION "1.1"
+#define PLUGIN_VERSION "1.2"
 
 #pragma newdecls required
 
@@ -114,7 +114,7 @@ public Action Command_CallAdmin(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(GetAdminFlag(GetUserAdmin(client), Admin_Generic))
+	if(GetAdminFlag(GetUserAdmin(client), Admin_Ban))
 	{
 		ReplyToCommand(client, "\x04[Call Admin] \x03You are an admin nigger, why the f*ck do you use that command?");
 		return Plugin_Handled;
@@ -136,7 +136,7 @@ public Action Command_CallAdmin(int client, int args)
 		if(!IsClientInGame(i) || IsFakeClient(i))
 			continue;
 
-		if(GetAdminFlag(GetUserAdmin(i), Admin_Generic))
+		if(GetAdminFlag(GetUserAdmin(i), Admin_Ban))
 		{
 			int IdleTime;
 			IdleTime = GetClientIdleTime(i);
