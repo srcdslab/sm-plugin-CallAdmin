@@ -1,30 +1,33 @@
-#include <sourcemod>
-#include <sourcecomms>
 #include <AFKManager>
-#include <Discord>
 #include <clientprefs>
+#include <Discord>
+#include <multicolors>
+#include <sourcebanschecker>
+#include <sourcecomms>
+#include <sourcemod>
 
-#define PLUGIN_VERSION "1.2"
+#define PLUGIN_VERSION "1.3"
+#define CHAT_PREFIX    "{gold}[Call Admin]{orchid}"
 
 #pragma newdecls required
 
-ConVar g_cvServerName, g_cvCooldown;
+ConVar g_cvCooldown;
+ConVar g_cCountBots = null;
 
 Handle g_hLastUse = INVALID_HANDLE;
 
-int g_iLastUse[MAXPLAYERS+1] = { -1, ... }
-
-bool g_Plugin_AFKManager;
+int g_iLastUse[MAXPLAYERS + 1] = { -1, ... }
 
 bool g_bLate = false;
+bool g_Plugin_AFKManager;
 
-public Plugin myinfo = 
+public Plugin myinfo =
 {
-	name = "CallAdmin",
-	author = "inGame, maxime1907, .Rushaway",
+	name        = "CallAdmin",
+	author      = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
-	version = PLUGIN_VERSION,
-	url = "https://nide.gg"
+	version     = PLUGIN_VERSION,
+	url         = "https://nide.gg"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -39,8 +42,8 @@ public void OnPluginStart()
 
 	g_hLastUse = RegClientCookie("calladmin_last_use", "Last call admin", CookieAccess_Protected);
 
-	g_cvServerName = CreateConVar("sm_calladmin_servername", "ServerName", "Server Name", FCVAR_NONE);
 	g_cvCooldown = CreateConVar("sm_calladmin_cooldown", "600", "Cooldown in seconds before a player can use sm_calladmin again", FCVAR_NONE);
+	g_cCountBots = CreateConVar("sm_calladmin_count_bots", "0", "Should we count bots as players ?(1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 
 	AutoExecConfig(true);
 
@@ -94,66 +97,72 @@ public void OnAllPluginsLoaded()
 	g_Plugin_AFKManager = LibraryExists("AFKManager");
 
 	LogMessage("CallAdmin capabilities:\nAFKManager:",
-		(g_Plugin_AFKManager ? "loaded" : "not loaded"));
+	           (g_Plugin_AFKManager ? "loaded" : "not loaded"));
 }
 
 public Action Command_CallAdmin(int client, int args)
-{	
-	if(!g_Plugin_AFKManager)
+{
+	if (!g_Plugin_AFKManager)
 	{
-		ReplyToCommand(client, "\x04[Call Admin] \x03AFKManager plugin required");
+		CReplyToCommand(client, "%s AFKManager plugin required", CHAT_PREFIX);
 		LogMessage("[CallAdmin] AFKManager plugin required");
 		return Plugin_Handled;
 	}
 
+	if (!client)
+	{
+		ReplyToCommand(client, "[SM] Cannot use this command from server console.");
+		return Plugin_Handled;
+	}
+
 	int IsGagged = SourceComms_GetClientGagType(client);
-	
-	if(IsGagged > 0)
+
+	if (IsGagged > 0)
 	{
-		ReplyToCommand(client, "\x04[Call Admin] \x03You are not allowed to use \x04Call Admin \x03since you are gagged.");
+		CReplyToCommand(client, "%s You are not allowed to use {gold}Call Admin {orchid}since you are gagged.", CHAT_PREFIX);
 		return Plugin_Handled;
 	}
 
-	if(GetAdminFlag(GetUserAdmin(client), Admin_Ban))
+	if (GetAdminFlag(GetUserAdmin(client), Admin_Ban))
 	{
-		ReplyToCommand(client, "\x04[Call Admin] \x03You are an admin nigger, why the f*ck do you use that command?");
+		CReplyToCommand(client, "%s You are an admin nigger, why the f*ck do you use that command?", CHAT_PREFIX);
 		return Plugin_Handled;
 	}
 
-	int currentTime = GetTime();
+	int currentTime  = GetTime();
 	int cooldownDiff = currentTime - g_iLastUse[client];
 	if (cooldownDiff < g_cvCooldown.IntValue)
 	{
-		ReplyToCommand(client, "\x04[Call Admin] \x03You are on cooldown, wait %d seconds.", g_cvCooldown.IntValue - cooldownDiff);
+		CReplyToCommand(client, "%s You are on cooldown, wait {default}%d {orchid}seconds.", CHAT_PREFIX, g_cvCooldown.IntValue - cooldownDiff);
 		return Plugin_Handled;
 	}
 
-	int Admins = 0;
+	int Admins    = 0;
 	int AfkAdmins = 0;
 
-	for(int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++)
 	{
-		if(!IsClientInGame(i) || IsFakeClient(i))
+		if (!IsClientInGame(i) || IsFakeClient(i))
 			continue;
 
-		if(GetAdminFlag(GetUserAdmin(i), Admin_Ban))
+		if (GetAdminFlag(GetUserAdmin(i), Admin_Ban))
 		{
 			int IdleTime;
 			IdleTime = GetClientIdleTime(i);
-			if(IdleTime > 30) AfkAdmins++;
+			if (IdleTime > 30) AfkAdmins++;
 			Admins++;
 		}
 	}
 
-	if(Admins > AfkAdmins)
+	if (Admins > AfkAdmins)
 	{
-		ReplyToCommand(client, "\x04[Call Admin] \x03You can't use \x04CallAdmin \x03since there is admins online. Type \x04!admins \x03to check currently online admins.");
+		CReplyToCommand(client, "%s You can't use {gold}CallAdmin {orchid}since there is admins online. Type {red}!admins {orchid}to check currently online admins.", CHAT_PREFIX);
 		return Plugin_Handled;
 	}
-	
-	if(args < 1)
+
+	if (args < 1)
 	{
-		ReplyToCommand(client, "\x04[Call Admin] \x03sm_calladmin <reason>");
+		CReplyToCommand(client, "%s sm_calladmin <reason>", CHAT_PREFIX);
 		return Plugin_Handled;
 	}
 
@@ -162,26 +171,72 @@ public Action Command_CallAdmin(int client, int args)
 	char sWebhook[64];
 	Format(sWebhook, sizeof(sWebhook), "calladmin");
 
+	/*char sTime[64];
+	int iTime = GetTime();
+	FormatTime(sTime, sizeof(sTime), "%m/%d/%Y @ %H:%M:%S", iTime);*/
+
+	char   sIP[32];
+	char   sPort[32];
+	char   sHostname[256];
+	ConVar cvIP = FindConVar("net_public_adr");
+	if (cvIP != null)
+		cvIP.GetString(sIP, sizeof(sIP));
+
+	ConVar cvPort = FindConVar("hostport");
+	cvPort.GetString(sPort, sizeof(sPort));
+
+	ConVar cvHostname = FindConVar("hostname");
+	cvHostname.GetString(sHostname, sizeof(sHostname));
+
+	char sCount[64];
+	int  iMaxPlayers = MaxClients;
+	int  iConnected  = GetClientCountEx(g_cCountBots.BoolValue);
+	Format(sCount, sizeof(sCount), "(%d/%d)", iConnected, iMaxPlayers);
+
+	char sConnect[256];
+	Format(sConnect, sizeof(sConnect), "**steam://connect/%s:%s**", sIP, sPort);
+
 	char sMessageDiscord[4096];
 	GetCmdArgString(sMessageDiscord, sizeof(sMessageDiscord));
-	
-	char sAuth[32], ServerName[64];
+
+	char sAuth[32];
 	GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth), true);
+
+	/*		>> Will implant this when Discord will have custom link... <<
+	char sInfos[2048], sClientID[256], sSteamClientID[64];
+	GetClientAuthId(client, AuthId_SteamID64, sSteamClientID, sizeof(sSteamClientID));
+	Format(sClientID, sizeof(sClientID), "More infos about the caller:  %s (https://steamcommunity.com/profiles/%s)", client, sSteamClientID);*/
 
 	char currentMap[PLATFORM_MAX_PATH];
 	GetCurrentMap(currentMap, sizeof(currentMap));
 
-	GetConVarString(g_cvServerName, ServerName, sizeof(ServerName));
-	
 	// Generate discord message
-	Format(sMessageDiscord, sizeof(sMessageDiscord), "@here Player **%N** [ *%s* ] just called admin on ***%s*** with reason: ```%s```", client,  sAuth, currentMap, sMessageDiscord);
+	Format(sMessageDiscord, sizeof(sMessageDiscord), "@here **%N** (**%d** bans - **%d** comms) [%s] is calling an Admin on **%s** %s with following reason: ```%s```(v%s) **Quick connect shortcut:** %s", client, SBCheckerGetClientsBans(client), SBCheckerGetClientsComms(client), sAuth, currentMap, sCount, sMessageDiscord, PLUGIN_VERSION, sConnect);
 
 	if (!Discord_SendMessage(sWebhook, sMessageDiscord))
 	{
-		ReplyToCommand(client, "\x04[Call Admin] \x03Failed to send your message.");
+		CReplyToCommand(client, "%s {red}Failed to send your message.", CHAT_PREFIX);
 		return Plugin_Handled;
 	}
 
-	ReplyToCommand(client, "\x04[Call Admin] \x03Message sent.\nRemember that abuse/spam of \x04CallAdmin \x03will result your block from chat");
+	CReplyToCommand(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result your block from chat", CHAT_PREFIX);
 	return Plugin_Handled;
+}
+
+stock int GetClientCountEx(bool countBots)
+{
+	int iRealClients = 0;
+	int iFakeClients = 0;
+
+	for (int player = 1; player <= MaxClients; player++)
+	{
+		if (IsClientConnected(player))
+		{
+			if (IsFakeClient(player))
+				iFakeClients++;
+			else
+				iRealClients++;
+		}
+	}
+	return countBots ? iFakeClients + iRealClients : iRealClients;
 }
