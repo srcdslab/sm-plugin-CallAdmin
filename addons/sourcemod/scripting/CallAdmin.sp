@@ -3,18 +3,19 @@
 #include <Discord>
 #include <clientprefs>
 #include <multicolors>
+#include <basecomm>
+#tryinclude <sourcecomms>
 #tryinclude <sourcebanschecker>
-#tryinclude <basecomm>
 #tryinclude <sourcecomms>
 
-#define PLUGIN_VERSION "1.4.1"
+#define PLUGIN_VERSION "1.6"
 #define CHAT_PREFIX "{gold}[Call Admin]{orchid}"
 
 #pragma newdecls required
 
 char sNetIP[32], sNetPort[32];
 
-ConVar g_cvCooldown, g_cvNetPublicAddr, g_cvPort;
+ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort;
 ConVar g_cCountBots = null;
 
 Handle g_hLastUse = INVALID_HANDLE;
@@ -47,6 +48,7 @@ public void OnPluginStart()
 
 	g_cvCooldown = CreateConVar("sm_calladmin_cooldown", "600", "Cooldown in seconds before a player can use sm_calladmin again", FCVAR_NONE);
 	g_cCountBots = CreateConVar("sm_calladmin_count_bots", "0", "Should we count bots as players ?(1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_cvAdmins = CreateConVar("sm_calladmin_block", "0", "Block calladmin usage if an admin is online?(1 = Yes, 0 = No)", FCVAR_PROTECTED, true, 0.0, true, 1.0);
 
 	g_cvNetPublicAddr  = FindConVar("net_public_adr");
 	if (g_cvNetPublicAddr != null)
@@ -157,27 +159,30 @@ public Action Command_CallAdmin(int client, int args)
 		return Plugin_Handled;
 	}
 
-	int Admins = 0;
-	int AfkAdmins = 0;
-
-	for(int i = 1; i <= MaxClients; i++)
+	if(g_cvAdmins.IntValue >= 1)
 	{
-		if(!IsClientInGame(i) || IsFakeClient(i))
-			continue;
+		int Admins = 0;
+		int AfkAdmins = 0;
 
-		if(GetAdminFlag(GetUserAdmin(i), Admin_Ban))
+		for(int i = 1; i <= MaxClients; i++)
 		{
-			int IdleTime;
-			IdleTime = GetClientIdleTime(i);
-			if(IdleTime > 30) AfkAdmins++;
-			Admins++;
-		}
-	}
+			if(!IsClientInGame(i) || IsFakeClient(i))
+				continue;
 
-	if(Admins > AfkAdmins)
-	{
-		CReplyToCommand(client, "%s You can't use {gold}CallAdmin {orchid}since there is admins online. Type {red}!admins {orchid}to check currently online admins.", CHAT_PREFIX);
-		return Plugin_Handled;
+			if(GetAdminFlag(GetUserAdmin(i), Admin_Ban))
+			{
+				int IdleTime;
+				IdleTime = GetClientIdleTime(i);
+				if(IdleTime > 30) AfkAdmins++;
+				Admins++;
+			}
+		}
+
+		if(Admins > AfkAdmins)
+		{
+			CReplyToCommand(client, "%s You can't use {gold}CallAdmin {orchid}since there is admins online. Type {red}!admins {orchid}to check currently online admins.", CHAT_PREFIX);
+			return Plugin_Handled;
+		}
 	}
 	
 	if(args < 1)
@@ -191,20 +196,21 @@ public Action Command_CallAdmin(int client, int args)
 	char sWebhook[64];
 	Format(sWebhook, sizeof(sWebhook), "calladmin");
 
-	/*char sTime[64];
+	char sTime[64];
 	int iTime = GetTime();
-	FormatTime(sTime, sizeof(sTime), "%m/%d/%Y @ %H:%M:%S", iTime);*/
+	FormatTime(sTime, sizeof(sTime), "Date : %d/%m/%Y @ %H:%M:%S", iTime);
 
 	char sCount[64];
 	int iMaxPlayers = MaxClients;
 	int iConnected = GetClientCountEx(g_cCountBots.BoolValue);
-	Format(sCount, sizeof(sCount), "(%d/%d)", iConnected, iMaxPlayers);
+	Format(sCount, sizeof(sCount), "Players : %d/%d", iConnected, iMaxPlayers);
 
 	char sConnect[256];
 	Format(sConnect, sizeof(sConnect), "**steam://connect/%s:%s**", sNetIP, sNetPort);
 
 	char sMessageDiscord[4096];
 	GetCmdArgString(sMessageDiscord, sizeof(sMessageDiscord));
+	ReplaceString(sMessageDiscord, sizeof(sMessageDiscord), "\\n", "\n");
 	
 	char sAuth[32];
 	GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth), true);
@@ -219,9 +225,9 @@ public Action Command_CallAdmin(int client, int args)
 	
 	// Generate discord message
 	#if defined _sourcebanschecker_included
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here **%N** (**%d** bans - **%d** comms) [%s] is calling an Admin on **%s** %s with following reason: ```%s```(v%s) **Quick connect shortcut:** %s", client, SBCheckerGetClientsBans(client), SBCheckerGetClientsComms(client), sAuth, currentMap, sCount, sMessageDiscord, PLUGIN_VERSION, sConnect);
+		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \nReason: %s```(*v%s*) **Quick connect shortcut:** %s", client, SBCheckerGetClientsBans(client), SBCheckerGetClientsComms(client), sAuth, currentMap, sTime, sCount, sMessageDiscord, PLUGIN_VERSION, sConnect);
 	#else
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here **%N** [%s] is calling an Admin on **%s** %s with reason: ```%s```(v%s) **Quick connect shortcut:** %s", client, sAuth, currentMap, sCount, sMessageDiscord, PLUGIN_VERSION, sConnect);
+		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \nReason: %s```(*v%s*) **Quick connect shortcut:** %s", client, sAuth, currentMap, sTime, sCount, sMessageDiscord, PLUGIN_VERSION, sConnect);
 	#endif
 
 	if (!Discord_SendMessage(sWebhook, sMessageDiscord))
