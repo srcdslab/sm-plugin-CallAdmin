@@ -2,13 +2,14 @@
 #include <AFKManager>
 #include <Discord>
 #include <clientprefs>
+#include <cstrike>
 #include <multicolors>
 #include <basecomm>
 #tryinclude <sourcecomms>
 #tryinclude <sourcebanschecker>
-#tryinclude <sourcecomms>
+#tryinclude <zombiereloaded>
 
-#define PLUGIN_VERSION "1.6"
+#define PLUGIN_VERSION "1.8"
 #define CHAT_PREFIX "{gold}[Call Admin]{orchid}"
 
 #pragma newdecls required
@@ -108,16 +109,15 @@ public void OnAllPluginsLoaded()
 {
 	g_Plugin_AFKManager = LibraryExists("AFKManager");
 
-	LogMessage("CallAdmin capabilities:\nAFKManager:",
-		(g_Plugin_AFKManager ? "loaded" : "not loaded"));
+	LogMessage("[CallAdmin] Capabilities: AFKManager: %s",
+		(g_Plugin_AFKManager ? "Loaded" : "Not loaded"));
 }
 
 public Action Command_CallAdmin(int client, int args)
 {	
 	if(!g_Plugin_AFKManager)
 	{
-		CReplyToCommand(client, "%s AFKManager plugin required", CHAT_PREFIX);
-		LogMessage("[CallAdmin] AFKManager plugin required");
+		CReplyToCommand(client, "%s {red}ERROR: AFKManager Plugin not detected. Aborting.", CHAT_PREFIX);
 		return Plugin_Handled;
 	}
 
@@ -205,6 +205,13 @@ public Action Command_CallAdmin(int client, int args)
 	int iConnected = GetClientCountEx(g_cCountBots.BoolValue);
 	Format(sCount, sizeof(sCount), "Players : %d/%d", iConnected, iMaxPlayers);
 
+	char sAliveCount[64];
+	#if defined _zr_included
+		Format(sAliveCount, sizeof(sAliveCount), "Alive : %d Humans - %d Zombies", GetTeamAliveCount(CS_TEAM_CT), GetTeamAliveCount(CS_TEAM_T));
+	#else
+		Format(sAliveCount, sizeof(sAliveCount), "Alive : %d CTs - %d Ts", GetTeamAliveCount(CS_TEAM_CT), GetTeamAliveCount(CS_TEAM_T));
+	#endif
+
 	char sConnect[256];
 	Format(sConnect, sizeof(sConnect), "**steam://connect/%s:%s**", sNetIP, sNetPort);
 
@@ -223,11 +230,21 @@ public Action Command_CallAdmin(int client, int args)
 	char currentMap[PLATFORM_MAX_PATH];
 	GetCurrentMap(currentMap, sizeof(currentMap));
 	
+	char sTimeLeft[32];
+	int timeleft;
+	if(GetMapTimeLeft(timeleft))
+	{
+		if(timeleft > 0)
+			Format(sTimeLeft, sizeof(sTimeLeft), "%i:%02i", timeleft / 60, timeleft % 60);
+		else if(timeleft <= 0)
+			Format(sTimeLeft, sizeof(sTimeLeft), "Last Round");
+	}
+	
 	// Generate discord message
 	#if defined _sourcebanschecker_included
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \nReason: %s```(*v%s*) **Quick connect shortcut:** %s", client, SBCheckerGetClientsBans(client), SBCheckerGetClientsComms(client), sAuth, currentMap, sTime, sCount, sMessageDiscord, PLUGIN_VERSION, sConnect);
+		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, SBCheckerGetClientsBans(client), SBCheckerGetClientsComms(client), sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, PLUGIN_VERSION, sConnect);
 	#else
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \nReason: %s```(*v%s*) **Quick connect shortcut:** %s", client, sAuth, currentMap, sTime, sCount, sMessageDiscord, PLUGIN_VERSION, sConnect);
+		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, PLUGIN_VERSION, sConnect);
 	#endif
 
 	if (!Discord_SendMessage(sWebhook, sMessageDiscord))
@@ -256,4 +273,18 @@ stock int GetClientCountEx(bool countBots)
 		}
 	}
 	return countBots ? iFakeClients + iRealClients : iRealClients;
+}
+
+stock int GetTeamAliveCount(int team)
+{
+	int count = 0;
+	
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(!IsClientInGame(i))
+			continue;
+		if(IsPlayerAlive(i) && GetClientTeam(i) == team)
+			count++;
+	}
+	return count;
 }
