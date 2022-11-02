@@ -9,7 +9,7 @@
 #tryinclude <sourcebanschecker>
 #tryinclude <zombiereloaded>
 
-#define PLUGIN_VERSION "1.8"
+#define PLUGIN_VERSION "1.9.1"
 #define CHAT_PREFIX "{gold}[Call Admin]{orchid}"
 
 #pragma newdecls required
@@ -50,13 +50,8 @@ public void OnPluginStart()
 	g_cvCooldown = CreateConVar("sm_calladmin_cooldown", "600", "Cooldown in seconds before a player can use sm_calladmin again", FCVAR_NONE);
 	g_cCountBots = CreateConVar("sm_calladmin_count_bots", "0", "Should we count bots as players ?(1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_cvAdmins = CreateConVar("sm_calladmin_block", "0", "Block calladmin usage if an admin is online?(1 = Yes, 0 = No)", FCVAR_PROTECTED, true, 0.0, true, 1.0);
-
-	g_cvNetPublicAddr  = FindConVar("net_public_adr");
-	if (g_cvNetPublicAddr != null)
-		g_cvNetPublicAddr.GetString(sNetIP, sizeof(sNetIP));
-		
+	g_cvNetPublicAddr = FindConVar("net_public_adr");
 	g_cvPort = FindConVar("hostport");
-	g_cvPort.GetString(sNetPort, sizeof (sNetPort));
 
 	AutoExecConfig(true);
 
@@ -213,6 +208,8 @@ public Action Command_CallAdmin(int client, int args)
 	#endif
 
 	char sConnect[256];
+	GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
+	GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
 	Format(sConnect, sizeof(sConnect), "**steam://connect/%s:%s**", sNetIP, sNetPort);
 
 	char sMessageDiscord[4096];
@@ -242,7 +239,7 @@ public Action Command_CallAdmin(int client, int args)
 	
 	// Generate discord message
 	#if defined _sourcebanschecker_included
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, SBCheckerGetClientsBans(client), SBCheckerGetClientsComms(client), sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, PLUGIN_VERSION, sConnect);
+		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, SBPP_CheckerGetClientsBans(client), SBPP_CheckerGetClientsComms(client), sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, PLUGIN_VERSION, sConnect);
 	#else
 		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, PLUGIN_VERSION, sConnect);
 	#endif
