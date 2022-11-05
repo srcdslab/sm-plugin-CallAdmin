@@ -1,15 +1,15 @@
 #include <sourcemod>
-#include <AFKManager>
-#include <Discord>
 #include <clientprefs>
 #include <cstrike>
-#include <multicolors>
 #include <basecomm>
+
+#include <AFKManager>
+#include <Discord>
+#include <multicolors>
 #tryinclude <sourcecomms>
 #tryinclude <sourcebanschecker>
 #tryinclude <zombiereloaded>
 
-#define PLUGIN_VERSION "1.9.1"
 #define CHAT_PREFIX "{gold}[Call Admin]{orchid}"
 
 #pragma newdecls required
@@ -31,7 +31,7 @@ public Plugin myinfo =
 	name = "CallAdmin",
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
-	version = PLUGIN_VERSION,
+	version = "1.9.2",
 	url = "https://nide.gg"
 };
 
@@ -236,12 +236,15 @@ public Action Command_CallAdmin(int client, int args)
 		else if(timeleft <= 0)
 			Format(sTimeLeft, sizeof(sTimeLeft), "Last Round");
 	}
-	
+
+	char sPluginVersion[256];
+	GetPluginInfo(INVALID_HANDLE, PlInfo_Version, sPluginVersion, sizeof(sPluginVersion));
+
 	// Generate discord message
 	#if defined _sourcebanschecker_included
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, SBPP_CheckerGetClientsBans(client), SBPP_CheckerGetClientsComms(client), sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, PLUGIN_VERSION, sConnect);
+		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, SBPP_CheckerGetClientsBans(client), SBPP_CheckerGetClientsComms(client), sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
 	#else
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, PLUGIN_VERSION, sConnect);
+		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
 	#endif
 
 	if (!Discord_SendMessage(sWebhook, sMessageDiscord))
