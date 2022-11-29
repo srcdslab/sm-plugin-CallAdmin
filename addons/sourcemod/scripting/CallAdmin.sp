@@ -17,8 +17,6 @@
 
 #pragma newdecls required
 
-char sNetIP[32], sNetPort[32];
-
 ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort;
 ConVar g_cCountBots = null;
 ConVar g_cvWebhook;
@@ -37,7 +35,7 @@ public Plugin myinfo =
 	name = "CallAdmin",
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
-	version = "1.10.1",
+	version = "1.10.2",
 	url = "https://nide.gg"
 };
 
@@ -58,8 +56,6 @@ public void OnPluginStart()
 	g_cvCooldown = CreateConVar("sm_calladmin_cooldown", "600", "Cooldown in seconds before a player can use sm_calladmin again", FCVAR_NONE);
 	g_cCountBots = CreateConVar("sm_calladmin_count_bots", "0", "Should we count bots as players ?(1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_cvAdmins = CreateConVar("sm_calladmin_block", "0", "Block calladmin usage if an admin is online?(1 = Yes, 0 = No)", FCVAR_PROTECTED, true, 0.0, true, 1.0);
-	g_cvNetPublicAddr = FindConVar("net_public_adr");
-	g_cvPort = FindConVar("hostport");
 
 	AutoExecConfig(true);
 
@@ -233,9 +229,15 @@ public Action Command_CallAdmin(int client, int args)
 	else
 		Format(sAliveCount, sizeof(sAliveCount), "Alive : %d CTs - %d Ts", GetTeamAliveCount(CS_TEAM_CT), GetTeamAliveCount(CS_TEAM_T));
 
+	g_cvNetPublicAddr = FindConVar("net_public_adr");
+	g_cvPort = FindConVar("hostport");
+
 	char sConnect[256];
-	GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
-	GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
+	char sNetIP[32], sNetPort[32];
+	if (g_cvPort != null)
+		GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
+	if (g_cvNetPublicAddr != null)
+		GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
 	Format(sConnect, sizeof(sConnect), "**steam://connect/%s:%s**", sNetIP, sNetPort);
 
 	char sMessageDiscord[4096];
@@ -339,7 +341,7 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 	if (!client || !IsClientInGame(client))
 		return;
 
-	if (response.Status != HTTPStatus_NoContent)
+	if (response.Status != HTTPStatus_OK)
 	{
 		CPrintToChat(client, "%s {red}Failed to send your message.", CHAT_PREFIX);
 	}
