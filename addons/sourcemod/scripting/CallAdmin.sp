@@ -4,7 +4,7 @@
 #include <basecomm>
 
 #include <AFKManager>
-#include <Discord>
+#include <discordWebhookAPI>
 #include <multicolors>
 #tryinclude <sourcecomms>
 #tryinclude <sourcebanschecker>
@@ -18,6 +18,7 @@ char sNetIP[32], sNetPort[32];
 
 ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort;
 ConVar g_cCountBots = null;
+ConVar g_cvWebhook;
 
 Handle g_hLastUse = INVALID_HANDLE;
 
@@ -31,7 +32,7 @@ public Plugin myinfo =
 	name = "CallAdmin",
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
-	version = "1.9.2",
+	version = "1.10.0",
 	url = "https://nide.gg"
 };
 
@@ -46,6 +47,8 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_calladmin", Command_CallAdmin, "Send a message to call admins.");
 
 	g_hLastUse = RegClientCookie("calladmin_last_use", "Last call admin", CookieAccess_Protected);
+
+	g_cvWebhook = CreateConVar("sm_calladmin_webhook", "", "The webhook URL of your Discord channel.", FCVAR_PROTECTED);
 
 	g_cvCooldown = CreateConVar("sm_calladmin_cooldown", "600", "Cooldown in seconds before a player can use sm_calladmin again", FCVAR_NONE);
 	g_cCountBots = CreateConVar("sm_calladmin_count_bots", "0", "Should we count bots as players ?(1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
@@ -179,7 +182,7 @@ public Action Command_CallAdmin(int client, int args)
 			return Plugin_Handled;
 		}
 	}
-	
+
 	if(args < 1)
 	{
 		CReplyToCommand(client, "%s sm_calladmin <reason>", CHAT_PREFIX);
@@ -187,9 +190,6 @@ public Action Command_CallAdmin(int client, int args)
 	}
 
 	g_iLastUse[client] = currentTime;
-
-	char sWebhook[64];
-	Format(sWebhook, sizeof(sWebhook), "calladmin");
 
 	char sTime[64];
 	int iTime = GetTime();
@@ -215,7 +215,7 @@ public Action Command_CallAdmin(int client, int args)
 	char sMessageDiscord[4096];
 	GetCmdArgString(sMessageDiscord, sizeof(sMessageDiscord));
 	ReplaceString(sMessageDiscord, sizeof(sMessageDiscord), "\\n", "\n");
-	
+
 	char sAuth[32];
 	GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth), true);
 
@@ -226,7 +226,7 @@ public Action Command_CallAdmin(int client, int args)
 
 	char currentMap[PLATFORM_MAX_PATH];
 	GetCurrentMap(currentMap, sizeof(currentMap));
-	
+
 	char sTimeLeft[32];
 	int timeleft;
 	if(GetMapTimeLeft(timeleft))
@@ -247,13 +247,18 @@ public Action Command_CallAdmin(int client, int args)
 		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
 	#endif
 
-	if (!Discord_SendMessage(sWebhook, sMessageDiscord))
-	{
-		CReplyToCommand(client, "%s {red}Failed to send your message.", CHAT_PREFIX);
-		return Plugin_Handled;
-	}
+	char szWebhookURL[1000];
+	g_cvWebhook.GetString(szWebhookURL, sizeof szWebhookURL);
 
-	CReplyToCommand(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result your block from chat", CHAT_PREFIX);
+	Webhook webhook = new Webhook(sMessageDiscord);
+
+	DataPack pack = new DataPack();
+	pack.WriteCell(client);
+	pack.Reset();
+
+	webhook.Execute(szWebhookURL, OnWebHookExecuted, pack);
+	delete webhook;
+
 	return Plugin_Handled;
 }
 
@@ -287,4 +292,22 @@ stock int GetTeamAliveCount(int team)
 			count++;
 	}
 	return count;
+}
+
+public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
+{
+	int client = pack.ReadCell();
+	delete pack
+
+	if (!client || !IsClientInGame(client))
+		return;
+
+	if (response.Status != HTTPStatus_NoContent)
+	{
+		CPrintToChat(client, "%s {red}Failed to send your message.", CHAT_PREFIX);
+	}
+	else
+	{
+		CPrintToChat(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result your block from chat", CHAT_PREFIX);
+	}
 }
