@@ -6,9 +6,12 @@
 #include <AFKManager>
 #include <discordWebhookAPI>
 #include <multicolors>
+
+#undef REQUIRE_PLUGIN
 #tryinclude <sourcecomms>
 #tryinclude <sourcebanschecker>
 #tryinclude <zombiereloaded>
+#define REQUIRE_PLUGIN
 
 #define CHAT_PREFIX "{gold}[Call Admin]{orchid}"
 
@@ -25,14 +28,16 @@ Handle g_hLastUse = INVALID_HANDLE;
 int g_iLastUse[MAXPLAYERS+1] = { -1, ... }
 
 bool g_bLate = false;
-bool g_Plugin_AFKManager;
+bool g_Plugin_AFKManager = false;
+bool g_Plugin_ZR = false;
+bool g_Plugin_SourceBans = false;
 
 public Plugin myinfo = 
 {
 	name = "CallAdmin",
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
-	version = "1.10.0",
+	version = "1.10.1",
 	url = "https://nide.gg"
 };
 
@@ -71,6 +76,32 @@ public void OnPluginStart()
 	}
 }
 
+public void OnAllPluginsLoaded()
+{
+	g_Plugin_AFKManager = LibraryExists("AFKManager");
+	g_Plugin_SourceBans = LibraryExists("sourcebans++");
+	g_Plugin_ZR = LibraryExists("zombiereloaded");
+
+	LogMessage("[CallAdmin] Capabilities: AFKManager: %s",
+		(g_Plugin_AFKManager ? "Loaded" : "Not loaded"));
+}
+
+public void OnLibraryAdded(const char[] sName)
+{
+	if (strcmp(sName, "zombiereloaded", false) == 0)
+		g_Plugin_ZR = true;
+	if (strcmp(sName, "sourcebans++", false) == 0)
+		g_Plugin_SourceBans = true;
+}
+
+public void OnLibraryRemoved(const char[] sName)
+{
+	if (strcmp(sName, "zombiereloaded", false) == 0)
+		g_Plugin_ZR = false;
+	if (strcmp(sName, "sourcebans++", false) == 0)
+		g_Plugin_SourceBans = false;
+}
+
 public void OnClientPutInServer(int client)
 {
 	if (AreClientCookiesCached(client))
@@ -103,14 +134,6 @@ public void SetClientCookies(int client)
 	SetClientCookie(client, g_hLastUse, sValue);
 }
 
-public void OnAllPluginsLoaded()
-{
-	g_Plugin_AFKManager = LibraryExists("AFKManager");
-
-	LogMessage("[CallAdmin] Capabilities: AFKManager: %s",
-		(g_Plugin_AFKManager ? "Loaded" : "Not loaded"));
-}
-
 public Action Command_CallAdmin(int client, int args)
 {	
 	if(!g_Plugin_AFKManager)
@@ -125,23 +148,27 @@ public Action Command_CallAdmin(int client, int args)
 		return Plugin_Handled;
 	}
 
-	#if defined _sourcecomms_included
-		if (client)
+	if (client)
+	{
+		bool bIsGagged = false;
+		if (g_Plugin_SourceBans)
 		{
-			int IsGagged = SourceComms_GetClientGagType(client);
-			if(IsGagged > 0)
-			{
-				CReplyToCommand(client, "%s You are not allowed to use {gold}Call Admin {orchid}since you are gagged.", CHAT_PREFIX);
-				return Plugin_Handled;
-			}
+#if defined _sourcecomms_included
+			int iGagType = SourceComms_GetClientGagType(client);
+			bIsGagged = iGagType > 0
+#endif
 		}
-	#else
-		if (BaseComm_IsClientGagged(client))
+		else
+		{
+			bIsGagged = BaseComm_IsClientGagged(client)
+		}
+
+		if (bIsGagged)
 		{
 			CReplyToCommand(client, "%s You are not allowed to use {gold}Call Admin {orchid}since you are gagged.", CHAT_PREFIX);
 			return Plugin_Handled;
 		}
-	#endif
+	}
 
 	if(GetAdminFlag(GetUserAdmin(client), Admin_Ban))
 	{
@@ -201,11 +228,10 @@ public Action Command_CallAdmin(int client, int args)
 	Format(sCount, sizeof(sCount), "Players : %d/%d", iConnected, iMaxPlayers);
 
 	char sAliveCount[64];
-	#if defined _zr_included
+	if (g_Plugin_ZR)
 		Format(sAliveCount, sizeof(sAliveCount), "Alive : %d Humans - %d Zombies", GetTeamAliveCount(CS_TEAM_CT), GetTeamAliveCount(CS_TEAM_T));
-	#else
+	else
 		Format(sAliveCount, sizeof(sAliveCount), "Alive : %d CTs - %d Ts", GetTeamAliveCount(CS_TEAM_CT), GetTeamAliveCount(CS_TEAM_T));
-	#endif
 
 	char sConnect[256];
 	GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
@@ -241,11 +267,22 @@ public Action Command_CallAdmin(int client, int args)
 	GetPluginInfo(INVALID_HANDLE, PlInfo_Version, sPluginVersion, sizeof(sPluginVersion));
 
 	// Generate discord message
+	if (g_Plugin_SourceBans)
+	{
+		int iClientBans = 0;
+		int iClientComms = 0;
+
 	#if defined _sourcebanschecker_included
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, SBPP_CheckerGetClientsBans(client), SBPP_CheckerGetClientsComms(client), sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
-	#else
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
+		iClientBans = SBPP_CheckerGetClientsBans(client);
+		iClientComms = SBPP_CheckerGetClientsComms(client);
 	#endif
+
+		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, iClientBans, iClientComms, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
+	}
+	else
+	{
+		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
+	}
 
 	char szWebhookURL[1000];
 	g_cvWebhook.GetString(szWebhookURL, sizeof szWebhookURL);
