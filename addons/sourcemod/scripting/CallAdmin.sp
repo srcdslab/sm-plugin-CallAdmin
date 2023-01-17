@@ -359,7 +359,7 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 		if(retries < 3)
 			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries);
 		
-		if(retries >= 3)
+		else if(retries >= 3)
 		{
 			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
 			LogError("[CallAdmin] Message can't be sent after %d retries.", retries);
@@ -372,10 +372,10 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 		pack.ReadString(webhookURL, sizeof(webhookURL));
 		
 		DataPack newPack;
-		CreateDataTimer(0.5, ExecuteWebhook_Timer, newPack);
 		newPack.WriteCell(userid);
 		newPack.WriteCell(view_as<int>(hook));
 		newPack.WriteString(webhookURL);
+		CreateDataTimer(0.5, ExecuteWebhook_Timer, newPack);
 		retries++;
 	}
 	else
