@@ -35,7 +35,7 @@ public Plugin myinfo =
 	name = "CallAdmin",
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
-	version = "1.10.2",
+	version = "1.10.3",
 	url = "https://nide.gg"
 };
 
@@ -288,15 +288,20 @@ public Action Command_CallAdmin(int client, int args)
 
 	char szWebhookURL[1000];
 	g_cvWebhook.GetString(szWebhookURL, sizeof szWebhookURL);
-
+	if(!szWebhookURL[0])
+	{
+		LogError("[CallAdmin] No webhook found or specified.");
+		return Plugin_Handled;
+	}
+	
 	Webhook webhook = new Webhook(sMessageDiscord);
 
 	DataPack pack = new DataPack();
-	pack.WriteCell(client);
-	pack.Reset();
+	pack.WriteCell(GetClientUserId(client));
+	pack.WriteCell(view_as<int>(webhook));
+	pack.WriteString(szWebhookURL);
 
 	webhook.Execute(szWebhookURL, OnWebHookExecuted, pack);
-	delete webhook;
 
 	return Plugin_Handled;
 }
@@ -335,18 +340,68 @@ stock int GetTeamAliveCount(int team)
 
 public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 {
-	int client = pack.ReadCell();
-	delete pack
+	static int retries;
+	
+	pack.Reset();
+	int userid = pack.ReadCell();
+	int client = GetClientOfUserId(userid);
+	Webhook hook = view_as<Webhook>(pack.ReadCell());
 
 	if (!client || !IsClientInGame(client))
+	{
+		delete hook;
+		delete pack;
 		return;
+	}
 
 	if (response.Status != HTTPStatus_OK)
 	{
-		CPrintToChat(client, "%s {red}Failed to send your message.", CHAT_PREFIX);
+		if(retries < 3)
+			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries);
+		
+		if(retries >= 3)
+		{
+			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
+			LogError("[CallAdmin] Message can't be sent after %d retries.", retries);
+			delete hook;
+			delete pack;
+			return;
+		}
+		
+		char webhookURL[PLATFORM_MAX_PATH];
+		pack.ReadString(webhookURL, sizeof(webhookURL));
+		
+		DataPack newPack;
+		CreateDataTimer(0.5, ExecuteWebhook_Timer, newPack);
+		newPack.WriteCell(userid);
+		newPack.WriteCell(view_as<int>(hook));
+		newPack.WriteString(webhookURL);
+		retries++;
 	}
 	else
-	{
+	{	
 		CPrintToChat(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result your block from chat", CHAT_PREFIX);
+		retries = 0;
 	}
+	
+	delete pack;
+	delete hook;
+	retries = 0;
+}
+
+Action ExecuteWebhook_Timer(Handle timer, DataPack pack)
+{
+	pack.Reset();
+	int userid = pack.ReadCell();
+	Webhook hook = view_as<Webhook>(pack.ReadCell());
+	
+	char webhookURL[PLATFORM_MAX_PATH];
+	pack.ReadString(webhookURL, sizeof(webhookURL));
+	
+	DataPack newPack = new DataPack();
+	newPack.WriteCell(userid);
+	newPack.WriteCell(view_as<int>(hook));
+	newPack.WriteString(webhookURL);	
+	hook.Execute(webhookURL, OnWebHookExecuted, newPack);
+	return Plugin_Continue;
 }
