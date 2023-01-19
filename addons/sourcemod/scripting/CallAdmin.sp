@@ -13,13 +13,16 @@
 #tryinclude <zombiereloaded>
 #define REQUIRE_PLUGIN
 
+#pragma newdecls required
+
 #define CHAT_PREFIX "{gold}[Call Admin]{orchid}"
 
-#pragma newdecls required
+#define WEBHOOK_URL_MAX_SIZE	1000
+
+ConVar g_cvWebhook, g_cvWebhookRetry;
 
 ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort;
 ConVar g_cCountBots = null;
-ConVar g_cvWebhook;
 
 Handle g_hLastUse = INVALID_HANDLE;
 
@@ -52,6 +55,7 @@ public void OnPluginStart()
 	g_hLastUse = RegClientCookie("calladmin_last_use", "Last call admin", CookieAccess_Protected);
 
 	g_cvWebhook = CreateConVar("sm_calladmin_webhook", "", "The webhook URL of your Discord channel.", FCVAR_PROTECTED);
+	g_cvWebhookRetry = CreateConVar("sm_calladmin_webhook_retry", "3", "Number of retries if webhook fails.", FCVAR_PROTECTED);
 
 	g_cvCooldown = CreateConVar("sm_calladmin_cooldown", "600", "Cooldown in seconds before a player can use sm_calladmin again", FCVAR_NONE);
 	g_cCountBots = CreateConVar("sm_calladmin_count_bots", "0", "Should we count bots as players ?(1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
@@ -286,24 +290,78 @@ public Action Command_CallAdmin(int client, int args)
 		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
 	}
 
-	char szWebhookURL[1000];
-	g_cvWebhook.GetString(szWebhookURL, sizeof szWebhookURL);
-	if(!szWebhookURL[0])
+	char sWebhookURL[WEBHOOK_URL_MAX_SIZE];
+	g_cvWebhook.GetString(sWebhookURL, sizeof sWebhookURL);
+	if(!sWebhookURL[0])
 	{
 		LogError("[CallAdmin] No webhook found or specified.");
 		return Plugin_Handled;
 	}
-	
-	Webhook webhook = new Webhook(sMessageDiscord);
 
-	DataPack pack = new DataPack();
-	pack.WriteCell(GetClientUserId(client));
-	pack.WriteCell(view_as<int>(webhook));
-	pack.WriteString(szWebhookURL);
-
-	webhook.Execute(szWebhookURL, OnWebHookExecuted, pack);
+	SendWebHook(GetClientUserId(client), sMessageDiscord, sWebhookURL);
 
 	return Plugin_Handled;
+}
+
+stock void SendWebHook(int userid, char sMessage[4096], char sWebhookURL[WEBHOOK_URL_MAX_SIZE])
+{
+	Webhook webhook = new Webhook(sMessage);
+
+	DataPack pack = new DataPack();
+	pack.WriteCell(userid);
+	pack.WriteString(sMessage);
+	pack.WriteString(sWebhookURL);
+
+	webhook.Execute(sWebhookURL, OnWebHookExecuted, pack);
+
+	delete webhook;
+}
+
+public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
+{
+	static int retries = 0;
+
+	pack.Reset();
+
+	int userid = pack.ReadCell();
+	int client = GetClientOfUserId(userid);
+
+	char sMessage[4096];
+	pack.ReadString(sMessage, sizeof(sMessage));
+
+	char sWebhookURL[WEBHOOK_URL_MAX_SIZE];
+	pack.ReadString(sWebhookURL, sizeof(sWebhookURL));
+
+	delete pack;
+
+	if (response.Status != HTTPStatus_OK)
+	{
+		if (retries < g_cvWebhookRetry.IntValue)
+		{
+			if (client && IsClientInGame(client))
+				CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries);
+
+			PrintToServer("[CallAdmin] Failed to send the webhook. Resending it .. (%d/%d)", retries, g_cvWebhookRetry.IntValue);
+
+			SendWebHook(userid, sMessage, sWebhookURL);
+			retries++;
+			return;
+		}
+		else
+		{
+			if (client && IsClientInGame(client))
+				CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
+
+			LogError("[CallAdmin] Failed to send the webhook after %d retries, aborting.", retries);
+		}
+	}
+	else
+	{
+		if (client && IsClientInGame(client))
+			CPrintToChat(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result in a chat block", CHAT_PREFIX);
+	}
+
+	retries = 0;
 }
 
 stock int GetClientCountEx(bool countBots)
@@ -336,72 +394,4 @@ stock int GetTeamAliveCount(int team)
 			count++;
 	}
 	return count;
-}
-
-public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
-{
-	static int retries;
-	
-	pack.Reset();
-	int userid = pack.ReadCell();
-	int client = GetClientOfUserId(userid);
-	Webhook hook = view_as<Webhook>(pack.ReadCell());
-
-	if (!client || !IsClientInGame(client))
-	{
-		delete hook;
-		delete pack;
-		return;
-	}
-
-	if (response.Status != HTTPStatus_OK)
-	{
-		if(retries < 3)
-			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries);
-		
-		else if(retries >= 3)
-		{
-			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
-			LogError("[CallAdmin] Message can't be sent after %d retries.", retries);
-			delete hook;
-			delete pack;
-			return;
-		}
-		
-		char webhookURL[PLATFORM_MAX_PATH];
-		pack.ReadString(webhookURL, sizeof(webhookURL));
-		
-		DataPack newPack;
-		CreateDataTimer(0.5, ExecuteWebhook_Timer, newPack);
-		newPack.WriteCell(userid);
-		newPack.WriteCell(view_as<int>(hook));
-		newPack.WriteString(webhookURL);
-		retries++;
-	}
-	else
-	{	
-		CPrintToChat(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result your block from chat", CHAT_PREFIX);
-		retries = 0;
-	}
-	
-	delete pack;
-	delete hook;
-	retries = 0;
-}
-
-Action ExecuteWebhook_Timer(Handle timer, DataPack pack)
-{
-	pack.Reset();
-	int userid = pack.ReadCell();
-	Webhook hook = view_as<Webhook>(pack.ReadCell());
-	
-	char webhookURL[PLATFORM_MAX_PATH];
-	pack.ReadString(webhookURL, sizeof(webhookURL));
-	
-	DataPack newPack = new DataPack();
-	newPack.WriteCell(userid);
-	newPack.WriteCell(view_as<int>(hook));
-	newPack.WriteString(webhookURL);	
-	hook.Execute(webhookURL, OnWebHookExecuted, newPack);
-	return Plugin_Continue;
 }
