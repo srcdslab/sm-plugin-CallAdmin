@@ -3,11 +3,11 @@
 #include <cstrike>
 #include <basecomm>
 
-#include <AFKManager>
 #include <discordWebhookAPI>
 #include <multicolors>
 
 #undef REQUIRE_PLUGIN
+#tryinclude <AFKManager>
 #tryinclude <sourcecomms>
 #tryinclude <sourcebanschecker>
 #tryinclude <zombiereloaded>
@@ -32,13 +32,14 @@ bool g_bLate = false;
 bool g_Plugin_AFKManager = false;
 bool g_Plugin_ZR = false;
 bool g_Plugin_SourceBans = false;
+bool g_Plugin_SourceComms = false;
 
 public Plugin myinfo = 
 {
 	name = "CallAdmin",
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
-	version = "1.10.3",
+	version = "1.10.5",
 	url = "https://nide.gg"
 };
 
@@ -80,10 +81,14 @@ public void OnAllPluginsLoaded()
 {
 	g_Plugin_AFKManager = LibraryExists("AFKManager");
 	g_Plugin_SourceBans = LibraryExists("sourcebans++");
+	g_Plugin_SourceComms = LibraryExists("sourcecomms++");
 	g_Plugin_ZR = LibraryExists("zombiereloaded");
 
-	LogMessage("[CallAdmin] Capabilities: AFKManager: %s",
-		(g_Plugin_AFKManager ? "Loaded" : "Not loaded"));
+	LogMessage("[CallAdmin] Capabilities: AFKManager: %s - SourcebansPP: %s - SourcecommsPP: %s - ZombieReloaded: %s",
+		(g_Plugin_AFKManager ? "Loaded" : "Not loaded"),
+		(g_Plugin_SourceBans ? "Loaded" : "Not loaded"),
+		(g_Plugin_SourceComms ? "Loaded" : "Not loaded"),
+		(g_Plugin_ZR ? "Loaded" : "Not loaded"));
 }
 
 public void OnLibraryAdded(const char[] sName)
@@ -92,6 +97,8 @@ public void OnLibraryAdded(const char[] sName)
 		g_Plugin_ZR = true;
 	if (strcmp(sName, "sourcebans++", false) == 0)
 		g_Plugin_SourceBans = true;
+	if (strcmp(sName, "sourcecomms++", false) == 0)
+		g_Plugin_SourceComms = true;
 }
 
 public void OnLibraryRemoved(const char[] sName)
@@ -100,6 +107,8 @@ public void OnLibraryRemoved(const char[] sName)
 		g_Plugin_ZR = false;
 	if (strcmp(sName, "sourcebans++", false) == 0)
 		g_Plugin_SourceBans = false;
+	if (strcmp(sName, "sourcecomms++", false) == 0)
+		g_Plugin_SourceComms = true;
 }
 
 public void OnClientPutInServer(int client)
@@ -135,13 +144,7 @@ public void SetClientCookies(int client)
 }
 
 public Action Command_CallAdmin(int client, int args)
-{	
-	if(!g_Plugin_AFKManager)
-	{
-		CReplyToCommand(client, "%s {red}ERROR: AFKManager Plugin not detected. Aborting.", CHAT_PREFIX);
-		return Plugin_Handled;
-	}
-
+{
 	if (!client)
 	{
 		ReplyToCommand(client, "[SM] Cannot use this command from server console.");
@@ -150,13 +153,15 @@ public Action Command_CallAdmin(int client, int args)
 
 	if (client)
 	{
+		int iGagType = 0;
 		bool bIsGagged = false;
-		if (g_Plugin_SourceBans)
+
+		if (g_Plugin_SourceComms)
 		{
-#if defined _sourcecomms_included
-			int iGagType = SourceComms_GetClientGagType(client);
+		#if defined _sourcecomms_included
+			iGagType = SourceComms_GetClientGagType(client);
+		#endif
 			bIsGagged = iGagType > 0
-#endif
 		}
 		else
 		{
@@ -196,9 +201,14 @@ public Action Command_CallAdmin(int client, int args)
 
 			if(GetAdminFlag(GetUserAdmin(i), Admin_Ban))
 			{
-				int IdleTime;
-				IdleTime = GetClientIdleTime(i);
-				if(IdleTime > 30) AfkAdmins++;
+			#if defined _AFKManager_Included
+				if(g_Plugin_AFKManager)
+				{
+					int IdleTime;
+					IdleTime = GetClientIdleTime(i);
+					if(IdleTime > 30) AfkAdmins++;
+				}
+			#endif
 				Admins++;
 			}
 		}
