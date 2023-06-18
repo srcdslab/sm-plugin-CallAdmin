@@ -23,6 +23,7 @@ ConVar g_cvWebhook, g_cvWebhookRetry;
 
 ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort;
 ConVar g_cCountBots = null;
+ConVar g_cRedirectURL = null;
 
 Handle g_hLastUse = INVALID_HANDLE;
 
@@ -39,7 +40,7 @@ public Plugin myinfo =
 	name = "CallAdmin",
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
-	version = "1.10.5",
+	version = "1.10.6",
 	url = "https://nide.gg"
 };
 
@@ -57,6 +58,7 @@ public void OnPluginStart()
 
 	g_cvWebhook = CreateConVar("sm_calladmin_webhook", "", "The webhook URL of your Discord channel.", FCVAR_PROTECTED);
 	g_cvWebhookRetry = CreateConVar("sm_calladmin_webhook_retry", "3", "Number of retries if webhook fails.", FCVAR_PROTECTED);
+	g_cRedirectURL = CreateConVar("sm_calladmin_redirect", "https://nide.gg/connect/", "URL to your redirect.php file.");
 
 	g_cvCooldown = CreateConVar("sm_calladmin_cooldown", "600", "Cooldown in seconds before a player can use sm_calladmin again", FCVAR_NONE);
 	g_cCountBots = CreateConVar("sm_calladmin_count_bots", "0", "Should we count bots as players ?(1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
@@ -246,13 +248,16 @@ public Action Command_CallAdmin(int client, int args)
 	g_cvNetPublicAddr = FindConVar("net_public_adr");
 	g_cvPort = FindConVar("hostport");
 
-	char sConnect[256];
-	char sNetIP[32], sNetPort[32];
+	char sConnect[256], sURL[256], sNetIP[32], sNetPort[32];
+	GetConVarString(g_cRedirectURL, sURL, sizeof(sURL));
+
 	if (g_cvPort != null)
 		GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
+
 	if (g_cvNetPublicAddr != null)
 		GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
-	Format(sConnect, sizeof(sConnect), "**steam://connect/%s:%s**", sNetIP, sNetPort);
+
+	Format(sConnect, sizeof(sConnect), "[%s:%s](%s?ip=%s&port=%s)", sNetIP, sNetPort, sURL, sNetIP, sNetPort);
 
 	char sMessageDiscord[4096];
 	GetCmdArgString(sMessageDiscord, sizeof(sMessageDiscord));
@@ -293,11 +298,15 @@ public Action Command_CallAdmin(int client, int args)
 		iClientComms = SBPP_CheckerGetClientsComms(client);
 	#endif
 
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, iClientBans, iClientComms, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
+		Format(sMessageDiscord, sizeof(sMessageDiscord), 
+			"@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", 
+			client, iClientBans, iClientComms, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
 	}
 	else
 	{
-		Format(sMessageDiscord, sizeof(sMessageDiscord), "@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
+		Format(sMessageDiscord, sizeof(sMessageDiscord), 
+			"@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```(*v%s*) **Quick join:** %s", 
+			client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sMessageDiscord, sPluginVersion, sConnect);
 	}
 
 	char sWebhookURL[WEBHOOK_URL_MAX_SIZE];
