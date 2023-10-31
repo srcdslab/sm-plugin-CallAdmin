@@ -10,11 +10,13 @@
 #tryinclude <AFKManager>
 #tryinclude <sourcecomms>
 #tryinclude <sourcebanschecker>
+#tryinclude <ExtendedDiscord>
 #tryinclude <zombiereloaded>
 #define REQUIRE_PLUGIN
 
 #pragma newdecls required
 
+#define PLUGIN_NAME "CallAdmin"
 #define CHAT_PREFIX "{gold}[Call Admin]{orchid}"
 
 #define WEBHOOK_URL_MAX_SIZE			1000
@@ -36,13 +38,14 @@ bool g_Plugin_AFKManager = false;
 bool g_Plugin_ZR = false;
 bool g_Plugin_SourceBans = false;
 bool g_Plugin_SourceComms = false;
+bool g_Plugin_ExtDiscord = false;
 
 public Plugin myinfo = 
 {
-	name = "CallAdmin",
+	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord and forum",
-	version = "1.12",
+	version = "1.13",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -94,12 +97,14 @@ public void OnAllPluginsLoaded()
 	g_Plugin_AFKManager = LibraryExists("AFKManager");
 	g_Plugin_SourceBans = LibraryExists("sourcebans++");
 	g_Plugin_SourceComms = LibraryExists("sourcecomms++");
+	g_Plugin_ExtDiscord = LibraryExists("ExtendedDiscord");
 	g_Plugin_ZR = LibraryExists("zombiereloaded");
 
-	LogMessage("[CallAdmin] Capabilities: AFKManager: %s - SourcebansPP: %s - SourcecommsPP: %s - ZombieReloaded: %s",
+	LogMessage("[CallAdmin] Capabilities: AFKManager: %s - SourcebansPP: %s - SourcecommsPP: %s - Extended Discord: %s - ZombieReloaded: %s",
 		(g_Plugin_AFKManager ? "Loaded" : "Not loaded"),
 		(g_Plugin_SourceBans ? "Loaded" : "Not loaded"),
 		(g_Plugin_SourceComms ? "Loaded" : "Not loaded"),
+		(g_Plugin_ExtDiscord ? "Loaded" : "Not loaded"),
 		(g_Plugin_ZR ? "Loaded" : "Not loaded"));
 }
 
@@ -111,6 +116,8 @@ public void OnLibraryAdded(const char[] sName)
 		g_Plugin_SourceBans = true;
 	if (strcmp(sName, "sourcecomms++", false) == 0)
 		g_Plugin_SourceComms = true;
+	if (strcmp(sName, "ExtendedDiscord", false) == 0)
+		g_Plugin_ExtDiscord = true;
 }
 
 public void OnLibraryRemoved(const char[] sName)
@@ -120,7 +127,9 @@ public void OnLibraryRemoved(const char[] sName)
 	if (strcmp(sName, "sourcebans++", false) == 0)
 		g_Plugin_SourceBans = false;
 	if (strcmp(sName, "sourcecomms++", false) == 0)
-		g_Plugin_SourceComms = true;
+		g_Plugin_SourceComms = false;
+	if (strcmp(sName, "ExtendedDiscord", false) == 0)
+		g_Plugin_ExtDiscord = false;
 }
 
 public void OnClientPutInServer(int client)
@@ -344,24 +353,16 @@ stock void SendWebHook(int userid, char sMessage[4096], char sWebhookURL[WEBHOOK
 
 	bool IsThread = g_cvChannelType.BoolValue;
 
-	if (IsThread)
-	{
-		if (!sThreadName[0] && !sThreadID[0])
-		{
+	if (IsThread) {
+		if (!sThreadName[0] && !sThreadID[0]) {
 			int client = GetClientOfUserId(userid);
-			LogError("[CallAdmin] Thread Name or ThreadID not found or specified.");
+			LogError("Thread Name or ThreadID not found or specified.");
 			CPrintToChat(client, "%s Oops something is wrong on server side, can't send the weebhook.", CHAT_PREFIX);
 			delete webhook;
 			return;
-		}
-		else
-		{
-			if (strlen(sThreadName) > 0)
-			{
+		} else {
+			if (strlen(sThreadName) > 0) {
 				webhook.SetThreadName(sThreadName);
-				// discord API doc: If thread_name is provided, a thread with that name will be created in the forum channel
-				// error: #220002	Webhooks posted to forum channels cannot have both a thread_name and thread_id
-				// So no need to continue for thread_id method
 				sThreadID[0] = '\0';
 			}
 		}
@@ -369,14 +370,14 @@ stock void SendWebHook(int userid, char sMessage[4096], char sWebhookURL[WEBHOOK
 
 	char sName[128];
 	g_cvUsername.GetString(sName, sizeof(sName));
-	if (strlen(sName) < 1)
-		FormatEx(sName, sizeof(sName), "CallAdmin");
 
 	char sAvatar[256];
 	g_cvAvatar.GetString(sAvatar, sizeof(sAvatar));
 
-	webhook.SetUsername(sName);
-	webhook.SetAvatarURL(sAvatar);
+	if (strlen(sName) > 0)
+		webhook.SetUsername(sName);
+	if (strlen(sAvatar) > 0)
+		webhook.SetAvatarURL(sAvatar);
 
 	DataPack pack = new DataPack();
 
@@ -408,39 +409,44 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 
 	delete pack;
 	
-	if (!IsThreadReply && response.Status != HTTPStatus_OK)
-	{
-		if (retries < g_cvWebhookRetry.IntValue)
-		{
+	if (!IsThreadReply && response.Status != HTTPStatus_OK) {
+		if (retries < g_cvWebhookRetry.IntValue) {
 			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries + 1);
 			PrintToServer("[CallAdmin] Failed to send the webhook. Resending it .. (%d/%d)", retries + 1, g_cvWebhookRetry.IntValue);
 			SendWebHook(userid, sMessage, sWebhookURL);
 			retries++;
 			return;
-		}
-		else
-		{
+		} else {
 			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
-			LogError("[CallAdmin] Failed to send the webhook after %d retries, aborting.", retries);
-			return;
+		#if defined _extendeddiscord_included
+			if (g_Plugin_ExtDiscord)
+				ExtendedDiscord_LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+			else
+				LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+		#else
+			LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+		#endif
 		}
 	}
-
-	if (IsThreadReply && response.Status != HTTPStatus_NoContent)
+	else if (IsThreadReply && response.Status != HTTPStatus_NoContent)
 	{
 		if (retries < g_cvWebhookRetry.IntValue)
 		{
 			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries + 1);
-			PrintToServer("[CallAdmin] Failed to send the webhook. Resending it .. (%d/%d)", retries + 1, g_cvWebhookRetry.IntValue);
+			PrintToServer("[CallAdmin] Failed to send the webhook. Resending it .. (%d/%d)", retries, g_cvWebhookRetry.IntValue);
 			SendWebHook(userid, sMessage, sWebhookURL);
 			retries++;
 			return;
-		}
-		else
-		{
+		} else {
 			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
-			LogError("[CallAdmin] Failed to send the webhook after %d retries, aborting.", retries);
-			return;
+		#if defined _extendeddiscord_included
+			if (g_Plugin_ExtDiscord)
+				ExtendedDiscord_LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+			else
+				LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+		#else
+			LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+		#endif
 		}
 	}
 
