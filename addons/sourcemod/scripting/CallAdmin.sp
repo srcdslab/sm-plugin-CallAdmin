@@ -409,7 +409,8 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 
 	delete pack;
 	
-	if (!IsThreadReply && response.Status != HTTPStatus_OK) {
+	if ((!IsThreadReply && response.Status != HTTPStatus_OK) || (IsThreadReply && response.Status != HTTPStatus_NoContent))
+	{
 		if (retries < g_cvWebhookRetry.IntValue) {
 			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries + 1);
 			PrintToServer("[CallAdmin] Failed to send the webhook. Resending it .. (%d/%d)", retries + 1, g_cvWebhookRetry.IntValue);
@@ -418,39 +419,22 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 			return;
 		} else {
 			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
-		#if defined _extendeddiscord_included
-			if (g_Plugin_ExtDiscord)
-				ExtendedDiscord_LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
-			else
+			if (!g_Plugin_ExtDiscord)
+			{
 				LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
-		#else
-			LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+				LogError("[%s] Failed message : %s", PLUGIN_NAME, sMessage);
+			}
+		#if defined _extendeddiscord_included
+			else
+			{
+				ExtendedDiscord_LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+				ExtendedDiscord_LogError("[%s] Failed message : %s", PLUGIN_NAME, sMessage);
+			}
 		#endif
 		}
 	}
-	else if (IsThreadReply && response.Status != HTTPStatus_NoContent)
-	{
-		if (retries < g_cvWebhookRetry.IntValue)
-		{
-			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries + 1);
-			PrintToServer("[CallAdmin] Failed to send the webhook. Resending it .. (%d/%d)", retries, g_cvWebhookRetry.IntValue);
-			SendWebHook(userid, sMessage, sWebhookURL);
-			retries++;
-			return;
-		} else {
-			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
-		#if defined _extendeddiscord_included
-			if (g_Plugin_ExtDiscord)
-				ExtendedDiscord_LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
-			else
-				LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
-		#else
-			LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
-		#endif
-		}
-	}
-
-	CPrintToChat(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result in a chat block", CHAT_PREFIX);
+	else
+		CPrintToChat(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result in a chat block", CHAT_PREFIX);
 
 	retries = 0;
 }
