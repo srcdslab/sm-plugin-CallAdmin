@@ -8,6 +8,7 @@
 
 #undef REQUIRE_PLUGIN
 #tryinclude <AFKManager>
+#tryinclude <AutoRecorder>
 #tryinclude <sourcecomms>
 #tryinclude <sourcebanschecker>
 #tryinclude <ExtendedDiscord>
@@ -22,12 +23,12 @@
 #define WEBHOOK_URL_MAX_SIZE			1000
 #define WEBHOOK_THREAD_NAME_MAX_SIZE	100
 
-ConVar g_cvWebhook, g_cvWebhookRetry, g_cvAvatar, g_cvUsername;
+ConVar g_cvWebhook, g_cvWebhookRetry, g_cvAvatar, g_cvUsername, g_cvMapThumbailURL;
 ConVar g_cvChannelType, g_cvThreadName, g_cvThreadID;
 
 ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort;
 ConVar g_cCountBots = null;
-ConVar g_cRedirectURL = null;
+ConVar g_cvRedirectURL = null;
 
 Handle g_hLastUse = INVALID_HANDLE;
 
@@ -39,18 +40,20 @@ bool g_Plugin_ZR = false;
 bool g_Plugin_SourceBans = false;
 bool g_Plugin_SourceComms = false;
 bool g_Plugin_ExtDiscord = false;
+bool g_Plugin_AutoRecorder = false;
 
 public Plugin myinfo = 
 {
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
-	description = "Send a calladmin message to discord and forum",
-	version = "1.13",
+	description = "Send a calladmin message to discord",
+	version = "2.0",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
+	RegPluginLibrary("CallAdmin");
 	g_bLate = late;
 	return APLRes_Success;
 }
@@ -66,8 +69,9 @@ public void OnPluginStart()
 	g_cvAvatar = CreateConVar("sm_calladmin_avatar", "https://avatars.githubusercontent.com/u/110772618?s=200&v=4", "URL to Avatar image.");
 	g_cvUsername = CreateConVar("sm_calladmin_username", "CallAdmin", "Discord username.");
 	g_cvWebhookRetry = CreateConVar("sm_calladmin_webhook_retry", "3", "Number of retries if webhook fails.", FCVAR_PROTECTED);
-	g_cRedirectURL = CreateConVar("sm_calladmin_redirect", "https://nide.gg/connect/", "URL to your redirect.php file.");
+	g_cvRedirectURL = CreateConVar("sm_calladmin_redirect", "https://nide.gg/connect/", "URL to your redirect.php file.");
 	g_cvChannelType = CreateConVar("sm_calladmin_channel_type", "0", "Type of your channel: (1 = Thread, 0 = Classic Text channel");
+	g_cvMapThumbailURL = CreateConVar("sm_calladmin_mapthumbailurl", "https://bans.nide.gg/images/maps/", "URL where you store map thumbail files. (.JPG ONLY)");
 
 	/* Thread config */
 	g_cvThreadName = CreateConVar("sm_calladmin_threadname", "CallAdmin", "The Thread Name of your Discord forums. (If not empty, will create a new thread)", FCVAR_PROTECTED);
@@ -98,38 +102,40 @@ public void OnAllPluginsLoaded()
 	g_Plugin_SourceBans = LibraryExists("sourcebans++");
 	g_Plugin_SourceComms = LibraryExists("sourcecomms++");
 	g_Plugin_ExtDiscord = LibraryExists("ExtendedDiscord");
+	g_Plugin_AutoRecorder = LibraryExists("AutoRecorder");
 	g_Plugin_ZR = LibraryExists("zombiereloaded");
-
-	LogMessage("[CallAdmin] Capabilities: AFKManager: %s - SourcebansPP: %s - SourcecommsPP: %s - Extended Discord: %s - ZombieReloaded: %s",
-		(g_Plugin_AFKManager ? "Loaded" : "Not loaded"),
-		(g_Plugin_SourceBans ? "Loaded" : "Not loaded"),
-		(g_Plugin_SourceComms ? "Loaded" : "Not loaded"),
-		(g_Plugin_ExtDiscord ? "Loaded" : "Not loaded"),
-		(g_Plugin_ZR ? "Loaded" : "Not loaded"));
 }
 
 public void OnLibraryAdded(const char[] sName)
 {
 	if (strcmp(sName, "zombiereloaded", false) == 0)
 		g_Plugin_ZR = true;
+	if (strcmp(sName, "AFKManager", false) == 0)
+		g_Plugin_AFKManager = true;
 	if (strcmp(sName, "sourcebans++", false) == 0)
 		g_Plugin_SourceBans = true;
 	if (strcmp(sName, "sourcecomms++", false) == 0)
 		g_Plugin_SourceComms = true;
 	if (strcmp(sName, "ExtendedDiscord", false) == 0)
 		g_Plugin_ExtDiscord = true;
+	if (strcmp(sName, "AutoRecorder", false) == 0)
+		g_Plugin_AutoRecorder = true;
 }
 
 public void OnLibraryRemoved(const char[] sName)
 {
 	if (strcmp(sName, "zombiereloaded", false) == 0)
 		g_Plugin_ZR = false;
+	if (strcmp(sName, "AFKManager", false) == 0)
+		g_Plugin_AFKManager = false;
 	if (strcmp(sName, "sourcebans++", false) == 0)
 		g_Plugin_SourceBans = false;
 	if (strcmp(sName, "sourcecomms++", false) == 0)
 		g_Plugin_SourceComms = false;
 	if (strcmp(sName, "ExtendedDiscord", false) == 0)
 		g_Plugin_ExtDiscord = false;
+	if (strcmp(sName, "AutoRecorder", false) == 0)
+		g_Plugin_AutoRecorder = false;
 }
 
 public void OnClientPutInServer(int client)
@@ -160,18 +166,24 @@ public void SetClientCookies(int client)
 {
 	char sValue[32];
 
-	Format(sValue, sizeof(sValue), "%i", g_iLastUse[client]);
+	FormatEx(sValue, sizeof(sValue), "%i", g_iLastUse[client]);
 	SetClientCookie(client, g_hLastUse, sValue);
 }
 
 public Action Command_CallAdmin(int client, int args)
 {
+	if (args < 1)
+	{
+		CPrintToChat(client, "%s sm_calladmin <reason>", CHAT_PREFIX);
+		return Plugin_Handled;
+	}
+
 	char sWebhookURL[WEBHOOK_URL_MAX_SIZE];
 	g_cvWebhook.GetString(sWebhookURL, sizeof sWebhookURL);
-	if(!sWebhookURL[0])
+	if (!sWebhookURL[0])
 	{
 		LogError("[CallAdmin] No webhook found or specified.");
-		CPrintToChat(client, "%s A configuration issue has been detected, can't send the weebhook.", CHAT_PREFIX);
+		CPrintToChat(client, "%s A configuration issue has been detected, can't send the webhook.", CHAT_PREFIX);
 		return Plugin_Handled;
 	}
 
@@ -190,11 +202,11 @@ public Action Command_CallAdmin(int client, int args)
 		#if defined _sourcecomms_included
 			iGagType = SourceComms_GetClientGagType(client);
 		#endif
-			bIsGagged = iGagType > 0
+			bIsGagged = iGagType > 0;
 		}
 		else
 		{
-			bIsGagged = BaseComm_IsClientGagged(client)
+			bIsGagged = BaseComm_IsClientGagged(client);
 		}
 
 		if (bIsGagged)
@@ -204,158 +216,70 @@ public Action Command_CallAdmin(int client, int args)
 		}
 	}
 
-	if(GetAdminFlag(GetUserAdmin(client), Admin_Ban))
+	if (GetAdminFlag(GetUserAdmin(client), Admin_Ban) && !GetAdminFlag(GetUserAdmin(client), Admin_Root))
 	{
-		CPrintToChat(client, "%s You are an admin nigger, why the f*ck do you use that command?", CHAT_PREFIX);
+		CPrintToChat(client, "%s You are an admin with the ban flag, why the f*ck do you use that command?", CHAT_PREFIX);
 		return Plugin_Handled;
 	}
 
-	int currentTime = GetTime();
-	int cooldownDiff = currentTime - g_iLastUse[client];
+	int cooldownDiff = GetTime() - g_iLastUse[client];
 	if (cooldownDiff < g_cvCooldown.IntValue)
 	{
 		CPrintToChat(client, "%s You are on cooldown, wait {default}%d {orchid}seconds.", CHAT_PREFIX, g_cvCooldown.IntValue - cooldownDiff);
 		return Plugin_Handled;
 	}
 
-	if(g_cvAdmins.IntValue >= 1)
+	if (g_cvAdmins.IntValue >= 1)
 	{
 		int Admins = 0;
 		int AfkAdmins = 0;
 
 		for(int i = 1; i <= MaxClients; i++)
 		{
-			if(!IsClientInGame(i) || IsFakeClient(i))
+			if (!IsClientInGame(i) || IsFakeClient(i))
 				continue;
 
-			if(GetAdminFlag(GetUserAdmin(i), Admin_Ban))
+			if (GetAdminFlag(GetUserAdmin(i), Admin_Ban))
 			{
 			#if defined _AFKManager_Included
-				if(g_Plugin_AFKManager)
+				if (g_Plugin_AFKManager)
 				{
 					int IdleTime = GetClientIdleTime(i);
-					if(IdleTime > 30) AfkAdmins++;
+					if (IdleTime > 30) AfkAdmins++;
 				}
 			#endif
 				Admins++;
 			}
 		}
 
-		if(Admins > AfkAdmins)
+		if (Admins > AfkAdmins)
 		{
 			CPrintToChat(client, "%s You can't use {gold}CallAdmin {orchid}since there is admins online. Type {red}!admins {orchid}to check currently online admins.", CHAT_PREFIX);
 			return Plugin_Handled;
 		}
 	}
 
-	if(args < 1)
-	{
-		CPrintToChat(client, "%s sm_calladmin <reason>", CHAT_PREFIX);
-		return Plugin_Handled;
-	}
-
-	g_iLastUse[client] = currentTime;
-
-	char sTime[64];
-	int iTime = GetTime();
-	FormatTime(sTime, sizeof(sTime), "Date : %d/%m/%Y @ %H:%M:%S", iTime);
-
-	char sCount[64];
-	int iMaxPlayers = MaxClients;
-	int iConnected = GetClientCountEx(g_cCountBots.BoolValue);
-	Format(sCount, sizeof(sCount), "Players : %d/%d", iConnected, iMaxPlayers);
-
-	char sAliveCount[64];
-	if (g_Plugin_ZR)
-		Format(sAliveCount, sizeof(sAliveCount), "Alive : %d Humans - %d Zombies", GetTeamAliveCount(CS_TEAM_CT), GetTeamAliveCount(CS_TEAM_T));
-	else
-		Format(sAliveCount, sizeof(sAliveCount), "Alive : %d CTs - %d Ts", GetTeamAliveCount(CS_TEAM_CT), GetTeamAliveCount(CS_TEAM_T));
-
-	g_cvNetPublicAddr = FindConVar("net_public_adr");
-	g_cvPort = FindConVar("hostport");
-
-	char sConnect[256], sURL[256], sNetIP[32], sNetPort[32];
-	GetConVarString(g_cRedirectURL, sURL, sizeof(sURL));
-
-	if (g_cvPort != null)
-		GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
-	delete g_cvPort;
-
-	if (g_cvNetPublicAddr != null)
-		GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
-	delete g_cvNetPublicAddr;
-
-	Format(sConnect, sizeof(sConnect), "[%s:%s](%s?ip=%s&port=%s)", sNetIP, sNetPort, sURL, sNetIP, sNetPort);
-
 	char sReason[256];
 	GetCmdArgString(sReason, sizeof(sReason));
 	ReplaceString(sReason, sizeof(sReason), "\\n", "\n");
-
-	char sAuth[32];
-	GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth));
-
-	
-	char sClientID[256], sSteamClientID[64];	
-	GetClientAuthId(client, AuthId_SteamID64, sSteamClientID, sizeof(sSteamClientID));
-	Format(sClientID, sizeof(sClientID), "[Steam Profile](<https://steamcommunity.com/profiles/%s>)", sSteamClientID);
-
-	char currentMap[PLATFORM_MAX_PATH];
-	GetCurrentMap(currentMap, sizeof(currentMap));
-
-	char sTimeLeft[32];
-	int timeleft;
-	if(GetMapTimeLeft(timeleft))
-	{
-		if(timeleft > 0)
-			Format(sTimeLeft, sizeof(sTimeLeft), "%i:%02i", timeleft / 60, timeleft % 60);
-		else if(timeleft <= 0)
-			Format(sTimeLeft, sizeof(sTimeLeft), "Last Round");
-	}
-
-	// Generate discord message
-	char sMessageDiscord[4096];
-
-	if (g_Plugin_SourceBans)
-	{
-		int iClientBans = 0;
-		int iClientComms = 0;
-
-	#if defined _sourcebanschecker_included
-		iClientBans = SBPP_CheckerGetClientsBans(client);
-		iClientComms = SBPP_CheckerGetClientsComms(client);
-	#endif
-
-		Format(sMessageDiscord, sizeof(sMessageDiscord), 
-			"@here ```%N (%d bans - %d comms) [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```**Quick join:** %s \n*%s*", 
-			client, iClientBans, iClientComms, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sReason, sConnect, sClientID);
-	}
-	else
-	{
-		Format(sMessageDiscord, sizeof(sMessageDiscord), 
-			"@here ```%N [%s] is calling an Admin. \nCurrent map : %s \n%s \n%s \n%s \nTimeLeft : %s \nReason: %s```**Quick join:** %s \n*%s*", 
-			client, sAuth, currentMap, sTime, sAliveCount, sCount, sTimeLeft, sReason, sConnect, sClientID);
-	}
-
-
-	SendWebHook(GetClientUserId(client), sMessageDiscord, sWebhookURL);
-	LogAction(client, -1, "%L has called an Admin. (Reason: %s)", client, sReason);
+	SendWebHook(GetClientUserId(client), sReason, sWebhookURL);
 
 	return Plugin_Handled;
 }
 
-stock void SendWebHook(int userid, char sMessage[4096], char sWebhookURL[WEBHOOK_URL_MAX_SIZE])
+stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_URL_MAX_SIZE])
 {
-	Webhook webhook = new Webhook(sMessage);
+	Webhook webhook = new Webhook("");
 
+	int client = GetClientOfUserId(userid);
+	bool IsThread = g_cvChannelType.BoolValue;
 	char sThreadID[32], sThreadName[WEBHOOK_THREAD_NAME_MAX_SIZE];
+
 	g_cvThreadID.GetString(sThreadID, sizeof sThreadID);
 	g_cvThreadName.GetString(sThreadName, sizeof sThreadName);
 
-	bool IsThread = g_cvChannelType.BoolValue;
-
 	if (IsThread) {
 		if (!sThreadName[0] && !sThreadID[0]) {
-			int client = GetClientOfUserId(userid);
 			LogError("Thread Name or ThreadID not found or specified.");
 			CPrintToChat(client, "%s Oops something is wrong on server side, can't send the weebhook.", CHAT_PREFIX);
 			delete webhook;
@@ -368,28 +292,197 @@ stock void SendWebHook(int userid, char sMessage[4096], char sWebhookURL[WEBHOOK
 		}
 	}
 
+	/* Webhook UserName */
 	char sName[128];
 	g_cvUsername.GetString(sName, sizeof(sName));
 
+	/* Webhook Avatar */
 	char sAvatar[256];
 	g_cvAvatar.GetString(sAvatar, sizeof(sAvatar));
 
+	/* Map Name */
+	char sMapName[PLATFORM_MAX_PATH], sMapNameLower[PLATFORM_MAX_PATH];
+	GetCurrentMap(sMapName, sizeof(sMapName));
+	GetCurrentMap(sMapNameLower, sizeof(sMapNameLower));
+
+	/* Map Time Left */
+	int timeleft;
+	char sTimeLeft[32];
+	if (GetMapTimeLeft(timeleft))
+	{
+		if (timeleft > 0)
+			FormatEx(sTimeLeft, sizeof(sTimeLeft), "%i:%02i", timeleft / 60, timeleft % 60);
+		else if (timeleft <= 0)
+			FormatEx(sTimeLeft, sizeof(sTimeLeft), "Last Round");
+	}
+	else FormatEx(sTimeLeft, sizeof(sTimeLeft), "N/A");
+
+	/* Team score */
+	char sTeamScore[64];
+	FormatEx(sTeamScore, sizeof(sTeamScore), "%s %d - %d %s", 
+		g_Plugin_ZR ? "Humans" : "CTs", CS_GetTeamScore(CS_TEAM_CT),
+		CS_GetTeamScore(CS_TEAM_T), g_Plugin_ZR ? "Zombies" : "Ts");
+
+	/* Team details */
+	char sTeamDetails[128];
+	FormatEx(sTeamDetails, sizeof(sTeamDetails), "%d/%d \n%d %s | %d %s | %d Spectators \n%d %s alive | %d %s alive", 
+		GetClientCountEx(g_cCountBots.BoolValue), MaxClients,
+		GetTeamCount(CS_TEAM_CT), g_Plugin_ZR ? "Humans" : "CTs",
+		GetTeamCount(CS_TEAM_T), g_Plugin_ZR ? "Zombies" : "Ts",
+		GetTeamCount(CS_TEAM_NONE) + GetTeamCount(CS_TEAM_SPECTATOR), 
+		GetTeamCount(CS_TEAM_CT, true), g_Plugin_ZR ? "Humans" : "CTs",
+		GetTeamCount(CS_TEAM_T, true), g_Plugin_ZR ? "Zombies" : "Ts");
+
+	/* Profile limk */
+	char sCallerInfos[512], sProfile[256], sSteanID64[64];
+	GetClientAuthId(client, AuthId_SteamID64, sSteanID64, sizeof(sSteanID64));
+	FormatEx(sProfile, sizeof(sProfile), "[`%N`](<https://steamcommunity.com/profiles/%s>)", client, sSteanID64);
+
+#if defined _sourcebanschecker_included
+	/* Caller bans informations */
+	if (g_Plugin_SourceBans)
+	{
+		int iClientBans = SBPP_CheckerGetClientsBans(client);
+		int iClientComms = SBPP_CheckerGetClientsComms(client);
+
+		FormatEx(sCallerInfos, sizeof(sCallerInfos), "%s (%d bans - %d comms)", sProfile, iClientBans, iClientComms);
+	}
+#endif
+
+	/* Caller authid informations */
+	char sAuth[32];
+	GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth), false);
+	FormatEx(sCallerInfos, sizeof(sCallerInfos), "%s [%s]", sCallerInfos, sAuth);
+
+	/* Quick Connect */
+	char sConnect[256], sURL[256], sNetIP[32], sNetPort[32];
+
+	g_cvPort = FindConVar("hostport");
+	if (g_cvPort != null)
+		GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
+
+	g_cvNetPublicAddr = FindConVar("net_public_adr");
+	if (g_cvNetPublicAddr != null)
+		GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
+
+	delete g_cvPort;
+	delete g_cvNetPublicAddr;
+
+	GetConVarString(g_cvRedirectURL, sURL, sizeof(sURL));
+	FormatEx(sConnect, sizeof(sConnect), "[%s:%s](%s?ip=%s&port=%s)", sNetIP, sNetPort, sURL, sNetIP, sNetPort);
+
+
+	/* Generate map image */
+	char sThumb[256], sThumbailURL[256];
+	StringToLowerCase(sMapNameLower);
+	GetConVarString(g_cvMapThumbailURL, sThumbailURL, sizeof(sThumbailURL));
+	Format(sThumb, sizeof(sThumb), "%s/%s.jpg", sThumbailURL, sMapNameLower);
+
+	/* Clean reason */
+	char sFormatedReason[256];
+	FormatEx(sFormatedReason, sizeof(sFormatedReason), "`%s`", sReason);
+
+	char sHeader[126];
+	FormatEx(sHeader, sizeof(sHeader), "`%N` has called an Admin. ||@here||", client);
+
+	/* Let's build the Embed */
 	if (strlen(sName) > 0)
 		webhook.SetUsername(sName);
 	if (strlen(sAvatar) > 0)
 		webhook.SetAvatarURL(sAvatar);
 
-	DataPack pack = new DataPack();
+	/* Header */
+	Embed Embed_1 = new Embed(sHeader);
+	Embed_1.SetTimeStampNow();
+	Embed_1.SetColor(4244579);
 
+	/* Map Image */
+	EmbedThumbnail thumbnail1 = new EmbedThumbnail();
+	thumbnail1.SetURL(sThumb);
+	Embed_1.SetThumbnail(thumbnail1);
+	delete thumbnail1;
+	
+	/* Fields */
+	EmbedField Field_Map = new EmbedField();
+	Field_Map.SetName("Current Map:");
+	Field_Map.SetValue(sMapName);
+	Field_Map.SetInline(true);
+	Embed_1.AddField(Field_Map);
+
+	EmbedField Field_Timeleft = new EmbedField();
+	Field_Timeleft.SetName("Timeleft:");
+	Field_Timeleft.SetValue(sTimeLeft);
+	Field_Timeleft.SetInline(true);
+	Embed_1.AddField(Field_Timeleft);
+
+	EmbedField Field_TeamScore = new EmbedField();
+	Field_TeamScore.SetName("Current Score:");
+	Field_TeamScore.SetValue(sTeamScore);
+	Field_TeamScore.SetInline(false);
+	Embed_1.AddField(Field_TeamScore);
+
+	EmbedField Field_Players = new EmbedField();
+	Field_Players.SetName("Players Details:");
+	Field_Players.SetValue(sTeamDetails);
+	Field_Players.SetInline(false);
+	Embed_1.AddField(Field_Players);
+
+	EmbedField Field_Caller = new EmbedField();
+	Field_Caller.SetName("Caller:");
+	Field_Caller.SetValue(sCallerInfos);
+	Field_Caller.SetInline(false);
+	Embed_1.AddField(Field_Caller);
+
+	EmbedField Field_Reason = new EmbedField();
+	Field_Reason.SetName("Call Reason:");
+	Field_Reason.SetValue(sFormatedReason);
+	Field_Reason.SetInline(false);
+	Embed_1.AddField(Field_Reason);
+
+	EmbedField Field_Connect = new EmbedField();
+	Field_Connect.SetName("Quick Connect:");
+	Field_Connect.SetValue(sConnect);
+	Field_Connect.SetInline(false);
+	Embed_1.AddField(Field_Connect);
+
+	#if defined _autorecorder_included
+	/* Get all demos informations */
+	if (g_Plugin_AutoRecorder && AutoRecorder_IsDemoRecording())
+	{
+		char sDate[32], sRecord[256];
+		int iCount = AutoRecorder_GetDemoRecordCount();
+		int iTick = AutoRecorder_GetDemoRecordingTick();
+		int retValTime = AutoRecorder_GetDemoRecordingTime();
+		if (retValTime == -1) FormatEx(sDate, sizeof(sDate), "N/A");
+		else FormatTime(sDate, sizeof(sDate), "%d.%m.%Y @ %H:%M", retValTime);
+
+		FormatEx(sRecord, sizeof(sRecord), "#%d @ Tick: ≈ %d (Started %s)", iCount, iTick, sDate);
+
+		EmbedField Field_Record = new EmbedField();
+		Field_Record.SetName("Demo:");
+		Field_Record.SetValue(sRecord);
+		Field_Record.SetInline(true);
+		Embed_1.AddField(Field_Record);
+	}
+#endif
+	
+	EmbedFooter Footer = new EmbedFooter("");
+	Footer.SetIconURL("https://github.githubassets.com/images/icons/emoji/unicode/1f55c.png?v8");
+	Embed_1.SetFooter(Footer);
+	delete Footer;
+
+	/* Generate the Embed */
+	webhook.AddEmbed(Embed_1);
+
+	DataPack pack = new DataPack();
 	if (IsThread && strlen(sThreadName) <= 0 && strlen(sThreadID) > 0)
 		pack.WriteCell(1);
-	else
-		pack.WriteCell(0);
-
+	else pack.WriteCell(0);
 	pack.WriteCell(userid);
-	pack.WriteString(sMessage);
+	pack.WriteString(sReason);
 	pack.WriteString(sWebhookURL);
 
+	/* Push the message */
 	webhook.Execute(sWebhookURL, OnWebHookExecuted, pack, sThreadID);
 	delete webhook;
 }
@@ -403,8 +496,8 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 	int userid = pack.ReadCell();
 	int client = GetClientOfUserId(userid);
 
-	char sMessage[4096], sWebhookURL[WEBHOOK_URL_MAX_SIZE];
-	pack.ReadString(sMessage, sizeof(sMessage));
+	char sReason[256], sWebhookURL[WEBHOOK_URL_MAX_SIZE];
+	pack.ReadString(sReason, sizeof(sReason));
 	pack.ReadString(sWebhookURL, sizeof(sWebhookURL));
 
 	delete pack;
@@ -414,7 +507,7 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 		if (retries < g_cvWebhookRetry.IntValue) {
 			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries + 1);
 			PrintToServer("[CallAdmin] Failed to send the webhook. Resending it .. (%d/%d)", retries + 1, g_cvWebhookRetry.IntValue);
-			SendWebHook(userid, sMessage, sWebhookURL);
+			SendWebHook(userid, sReason, sWebhookURL);
 			retries++;
 			return;
 		} else {
@@ -422,19 +515,25 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 			if (!g_Plugin_ExtDiscord)
 			{
 				LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
-				LogError("[%s] Failed message : %s", PLUGIN_NAME, sMessage);
+				LogError("[%s] %L tried to Call an Admin with the following reason: %s", PLUGIN_NAME, client, sReason);
 			}
 		#if defined _extendeddiscord_included
 			else
 			{
 				ExtendedDiscord_LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
-				ExtendedDiscord_LogError("[%s] Failed message : %s", PLUGIN_NAME, sMessage);
+				ExtendedDiscord_LogError("[%s] %L tried to Call an Admin with the following reason: %s", PLUGIN_NAME, client, sReason);
 			}
 		#endif
 		}
 	}
 	else
+	{
+		if (!GetAdminFlag(GetUserAdmin(client), Admin_Root))
+			g_iLastUse[client] = GetTime();
+
+		LogAction(client, -1, "%L has called an Admin. (Reason: %s)", client, sReason);
 		CPrintToChat(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result in a chat block", CHAT_PREFIX);
+	}
 
 	retries = 0;
 }
@@ -446,9 +545,9 @@ stock int GetClientCountEx(bool countBots)
 
 	for(int player = 1; player <= MaxClients; player++)
 	{
-		if(IsClientConnected(player))
+		if (IsClientConnected(player))
 		{
-			if(IsFakeClient(player))
+			if (IsFakeClient(player))
 				iFakeClients++;
 			else
 				iRealClients++;
@@ -457,16 +556,26 @@ stock int GetClientCountEx(bool countBots)
 	return countBots ? iFakeClients + iRealClients : iRealClients;
 }
 
-stock int GetTeamAliveCount(int team)
+stock int GetTeamCount(int team, bool alive = false)
 {
 	int count = 0;
 	
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(!IsClientInGame(i))
+		if (!IsClientInGame(i))
 			continue;
-		if(IsPlayerAlive(i) && GetClientTeam(i) == team)
+		if (alive && IsPlayerAlive(i) && GetClientTeam(i) == team)
+			count++;
+		else if (!alive && GetClientTeam(i) == team)
 			count++;
 	}
 	return count;
+}
+
+stock void StringToLowerCase(char[] input)
+{
+	for (int i = 0; i < strlen(input); i++)
+	{
+		input[i] = CharToLower(input[i]);
+	}
 }
