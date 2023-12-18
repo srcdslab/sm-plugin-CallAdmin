@@ -269,7 +269,7 @@ public Action Command_CallAdmin(int client, int args)
 
 stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_URL_MAX_SIZE])
 {
-	Webhook webhook = new Webhook("");
+	Webhook webhook = new Webhook("||@here||");
 
 	int client = GetClientOfUserId(userid);
 	bool IsThread = g_cvChannelType.BoolValue;
@@ -383,7 +383,7 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	FormatEx(sFormatedReason, sizeof(sFormatedReason), "`%s`", sReason);
 
 	char sHeader[126];
-	FormatEx(sHeader, sizeof(sHeader), "`%N` has called an Admin. ||@here||", client);
+	FormatEx(sHeader, sizeof(sHeader), "`%N` has called an Admin.", client);
 
 	/* Let's build the Embed */
 	if (strlen(sName) > 0)
