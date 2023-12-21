@@ -23,12 +23,13 @@
 #define WEBHOOK_URL_MAX_SIZE			1000
 #define WEBHOOK_THREAD_NAME_MAX_SIZE	100
 
-ConVar g_cvWebhook, g_cvWebhookRetry, g_cvAvatar, g_cvUsername, g_cvMapThumbailURL;
+ConVar g_cvWebhook, g_cvWebhookRetry, g_cvAvatar, g_cvUsername, g_cvMapThumbnailURL, g_cvColor;
 ConVar g_cvChannelType, g_cvThreadName, g_cvThreadID;
 
 ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort;
 ConVar g_cCountBots = null;
 ConVar g_cvRedirectURL = null;
+ConVar g_cvFooterIcon = null;
 
 Handle g_hLastUse = INVALID_HANDLE;
 
@@ -71,7 +72,9 @@ public void OnPluginStart()
 	g_cvWebhookRetry = CreateConVar("sm_calladmin_webhook_retry", "3", "Number of retries if webhook fails.", FCVAR_PROTECTED);
 	g_cvRedirectURL = CreateConVar("sm_calladmin_redirect", "https://nide.gg/connect/", "URL to your redirect.php file.");
 	g_cvChannelType = CreateConVar("sm_calladmin_channel_type", "0", "Type of your channel: (1 = Thread, 0 = Classic Text channel");
-	g_cvMapThumbailURL = CreateConVar("sm_calladmin_mapthumbailurl", "https://bans.nide.gg/images/maps/", "URL where you store map thumbail files. (.JPG ONLY)");
+	g_cvMapThumbnailURL = CreateConVar("sm_calladmin_mapthumbnailurl", "https://bans.nide.gg/images/maps/", "URL where you store map thumbail files. (.JPG ONLY)");
+	g_cvColor = CreateConVar("sm_calladmin_color", "4244579", "Decimal color code for the embed. \nHex to Decimal - https://www.binaryhexconverter.com/hex-to-decimal-converter");
+	g_cvFooterIcon = CreateConVar("sm_calladmin_footer_icon", "https://github.githubassets.com/images/icons/emoji/unicode/1f55c.png?v8", "Url to the footer icon.");
 
 	/* Thread config */
 	g_cvThreadName = CreateConVar("sm_calladmin_threadname", "CallAdmin", "The Thread Name of your Discord forums. (If not empty, will create a new thread)", FCVAR_PROTECTED);
@@ -245,7 +248,8 @@ public Action Command_CallAdmin(int client, int args)
 				if (g_Plugin_AFKManager)
 				{
 					int IdleTime = GetClientIdleTime(i);
-					if (IdleTime > 30) AfkAdmins++;
+					if (IdleTime > 30)
+						AfkAdmins++;
 				}
 			#endif
 				Admins++;
@@ -333,10 +337,10 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 		GetTeamCount(CS_TEAM_CT, true), g_Plugin_ZR ? "Humans" : "CTs",
 		GetTeamCount(CS_TEAM_T, true), g_Plugin_ZR ? "Zombies" : "Ts");
 
-	/* Profile limk */
-	char sCallerInfos[512], sProfile[256], sSteanID64[64];
-	GetClientAuthId(client, AuthId_SteamID64, sSteanID64, sizeof(sSteanID64));
-	FormatEx(sProfile, sizeof(sProfile), "[`%N`](<https://steamcommunity.com/profiles/%s>)", client, sSteanID64);
+	/* Profile link */
+	char sCallerInfos[512], sProfile[256], sSteamID64[64];
+	GetClientAuthId(client, AuthId_SteamID64, sSteamID64, sizeof(sSteamID64));
+	FormatEx(sProfile, sizeof(sProfile), "[`%N`](<https://steamcommunity.com/profiles/%s>)", client, sSteamID64);
 
 #if defined _sourcebanschecker_included
 	/* Caller bans informations */
@@ -359,23 +363,29 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 
 	g_cvPort = FindConVar("hostport");
 	if (g_cvPort != null)
+	{
 		GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
+		delete g_cvPort;
+	}
 
 	g_cvNetPublicAddr = FindConVar("net_public_adr");
 	if (g_cvNetPublicAddr != null)
+	{
 		GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
-
-	delete g_cvPort;
-	delete g_cvNetPublicAddr;
+		delete g_cvNetPublicAddr;
+	}
 
 	GetConVarString(g_cvRedirectURL, sURL, sizeof(sURL));
 	FormatEx(sConnect, sizeof(sConnect), "[%s:%s](%s?ip=%s&port=%s)", sNetIP, sNetPort, sURL, sNetIP, sNetPort);
 
+	/* Footer Icon */
+	char sFooterIcon[256];
+	GetConVarString(g_cvFooterIcon, sFooterIcon, sizeof(sFooterIcon));
 
 	/* Generate map image */
 	char sThumb[256], sThumbailURL[256];
 	StringToLowerCase(sMapNameLower);
-	GetConVarString(g_cvMapThumbailURL, sThumbailURL, sizeof(sThumbailURL));
+	GetConVarString(g_cvMapThumbnailURL, sThumbailURL, sizeof(sThumbailURL));
 	Format(sThumb, sizeof(sThumb), "%s/%s.jpg", sThumbailURL, sMapNameLower);
 
 	/* Clean reason */
@@ -394,7 +404,7 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	/* Header */
 	Embed Embed_1 = new Embed(sHeader);
 	Embed_1.SetTimeStampNow();
-	Embed_1.SetColor(4244579);
+	Embed_1.SetColor(g_cvColor.IntValue);
 
 	/* Map Image */
 	EmbedThumbnail thumbnail1 = new EmbedThumbnail();
@@ -467,7 +477,7 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 #endif
 	
 	EmbedFooter Footer = new EmbedFooter("");
-	Footer.SetIconURL("https://github.githubassets.com/images/icons/emoji/unicode/1f55c.png?v8");
+	Footer.SetIconURL(sFooterIcon);
 	Embed_1.SetFooter(Footer);
 	delete Footer;
 
@@ -477,7 +487,8 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	DataPack pack = new DataPack();
 	if (IsThread && strlen(sThreadName) <= 0 && strlen(sThreadID) > 0)
 		pack.WriteCell(1);
-	else pack.WriteCell(0);
+	else
+		pack.WriteCell(0);
 	pack.WriteCell(userid);
 	pack.WriteString(sReason);
 	pack.WriteString(sWebhookURL);
