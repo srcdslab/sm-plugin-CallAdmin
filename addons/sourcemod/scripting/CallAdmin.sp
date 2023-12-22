@@ -319,23 +319,27 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 		else if (timeleft <= 0)
 			FormatEx(sTimeLeft, sizeof(sTimeLeft), "Last Round");
 	}
-	else FormatEx(sTimeLeft, sizeof(sTimeLeft), "N/A");
+	else
+		FormatEx(sTimeLeft, sizeof(sTimeLeft), "N/A");
+
+	/* Team names */
+	char sTeamCTName[32], sTeamTName[32];
+	sTeamCTName = g_Plugin_ZR ? "Humans" : "CTs"
+	sTeamTName = g_Plugin_ZR ? "Zombies" : "Ts"
 
 	/* Team score */
 	char sTeamScore[64];
-	FormatEx(sTeamScore, sizeof(sTeamScore), "%s %d - %d %s", 
-		g_Plugin_ZR ? "Humans" : "CTs", CS_GetTeamScore(CS_TEAM_CT),
-		CS_GetTeamScore(CS_TEAM_T), g_Plugin_ZR ? "Zombies" : "Ts");
+	FormatEx(sTeamScore, sizeof(sTeamScore), "%s %d - %d %s", sTeamCTName, CS_GetTeamScore(CS_TEAM_CT), CS_GetTeamScore(CS_TEAM_T), sTeamTName);
 
 	/* Team details */
 	char sTeamDetails[128];
 	FormatEx(sTeamDetails, sizeof(sTeamDetails), "%d/%d \n%d %s | %d %s | %d Spectators \n%d %s alive | %d %s alive", 
 		GetClientCountEx(g_cCountBots.BoolValue), MaxClients,
-		GetTeamCount(CS_TEAM_CT), g_Plugin_ZR ? "Humans" : "CTs",
-		GetTeamCount(CS_TEAM_T), g_Plugin_ZR ? "Zombies" : "Ts",
+		GetTeamCount(CS_TEAM_CT), sTeamCTName,
+		GetTeamCount(CS_TEAM_T), sTeamTName,
 		GetTeamCount(CS_TEAM_NONE) + GetTeamCount(CS_TEAM_SPECTATOR), 
-		GetTeamCount(CS_TEAM_CT, true), g_Plugin_ZR ? "Humans" : "CTs",
-		GetTeamCount(CS_TEAM_T, true), g_Plugin_ZR ? "Zombies" : "Ts");
+		GetTeamCount(CS_TEAM_CT, true), sTeamCTName,
+		GetTeamCount(CS_TEAM_T, true), sTeamTName);
 
 	/* Profile link */
 	char sCallerInfos[512], sProfile[256], sSteamID64[64];
@@ -463,8 +467,10 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 		int iCount = AutoRecorder_GetDemoRecordCount();
 		int iTick = AutoRecorder_GetDemoRecordingTick();
 		int retValTime = AutoRecorder_GetDemoRecordingTime();
-		if (retValTime == -1) FormatEx(sDate, sizeof(sDate), "N/A");
-		else FormatTime(sDate, sizeof(sDate), "%d.%m.%Y @ %H:%M", retValTime);
+		if (retValTime == -1)
+			FormatEx(sDate, sizeof(sDate), "N/A");
+		else
+			FormatTime(sDate, sizeof(sDate), "%d.%m.%Y @ %H:%M", retValTime);
 
 		FormatEx(sRecord, sizeof(sRecord), "#%d @ Tick: ≈ %d (Started %s)", iCount, iTick, sDate);
 
