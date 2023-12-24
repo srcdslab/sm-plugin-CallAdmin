@@ -1,6 +1,7 @@
 #include <sourcemod>
 #include <clientprefs>
 #include <cstrike>
+#include <sdktools>
 #include <basecomm>
 
 #include <discordWebhookAPI>
@@ -329,17 +330,17 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 
 	/* Team score */
 	char sTeamScore[64];
-	FormatEx(sTeamScore, sizeof(sTeamScore), "%s %d - %d %s", sTeamCTName, CS_GetTeamScore(CS_TEAM_CT), CS_GetTeamScore(CS_TEAM_T), sTeamTName);
+	FormatEx(sTeamScore, sizeof(sTeamScore), "%s %d - %d %s", sTeamCTName, GetTeamScore(CS_TEAM_CT), GetTeamScore(CS_TEAM_T), sTeamTName);
 
 	/* Team details */
 	char sTeamDetails[128];
 	FormatEx(sTeamDetails, sizeof(sTeamDetails), "%d/%d \n%d %s | %d %s | %d Spectators \n%d %s alive | %d %s alive", 
 		GetClientCountEx(g_cCountBots.BoolValue), MaxClients,
-		GetTeamCount(CS_TEAM_CT), sTeamCTName,
-		GetTeamCount(CS_TEAM_T), sTeamTName,
-		GetTeamCount(CS_TEAM_NONE) + GetTeamCount(CS_TEAM_SPECTATOR), 
-		GetTeamCount(CS_TEAM_CT, true), sTeamCTName,
-		GetTeamCount(CS_TEAM_T, true), sTeamTName);
+		GetPlayerCountByTeam(CS_TEAM_CT), sTeamCTName,
+		GetPlayerCountByTeam(CS_TEAM_T), sTeamTName,
+		GetPlayerCountByTeam(CS_TEAM_NONE) + GetPlayerCountByTeam(CS_TEAM_SPECTATOR), 
+		GetPlayerCountByTeam(CS_TEAM_CT, true), sTeamCTName,
+		GetPlayerCountByTeam(CS_TEAM_T, true), sTeamTName);
 
 	/* Profile link */
 	char sCallerInfos[512], sProfile[256], sSteamID64[64];
@@ -573,10 +574,10 @@ stock int GetClientCountEx(bool countBots)
 	return countBots ? iFakeClients + iRealClients : iRealClients;
 }
 
-stock int GetTeamCount(int team, bool alive = false)
+stock int GetPlayerCountByTeam(int team, bool alive = false)
 {
 	int count = 0;
-	
+
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if (!IsClientInGame(i))
