@@ -49,7 +49,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.0",
+	version = "2.0.1",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -268,6 +268,22 @@ public Action Command_CallAdmin(int client, int args)
 	GetCmdArgString(sReason, sizeof(sReason));
 	ReplaceString(sReason, sizeof(sReason), "\\n", "\n");
 	SendWebHook(GetClientUserId(client), sReason, sWebhookURL);
+
+	if (g_cvAdmins.IntValue < 1)
+	{
+		// Print a messages to online admins
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if (!IsClientInGame(i) || IsFakeClient(i))
+				continue;
+
+			if (GetAdminFlag(GetUserAdmin(i), Admin_Ban))
+			{
+				CPrintToChat(i, "%s {olive}%N {orchid}has called an admin ({default}Reason: %s{orchid})", CHAT_PREFIX, client, sReason);
+				continue;
+			}
+		}
+	}
 
 	return Plugin_Handled;
 }
