@@ -21,9 +21,6 @@
 #define PLUGIN_NAME "CallAdmin"
 #define CHAT_PREFIX "{gold}[Call Admin]{orchid}"
 
-#define WEBHOOK_URL_MAX_SIZE			1000
-#define WEBHOOK_THREAD_NAME_MAX_SIZE	100
-
 ConVar g_cvWebhook, g_cvWebhookRetry, g_cvAvatar, g_cvUsername, g_cvMapThumbnailURL, g_cvColor;
 ConVar g_cvChannelType, g_cvThreadName, g_cvThreadID;
 
@@ -49,7 +46,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.0.1",
+	version = "2.0.2",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
