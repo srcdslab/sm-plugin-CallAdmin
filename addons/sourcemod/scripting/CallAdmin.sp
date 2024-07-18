@@ -46,7 +46,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.0.2",
+	version = "2.0.3",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -387,11 +387,11 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	}
 
 	g_cvNetPublicAddr = FindConVar("net_public_adr");
-	if (g_cvNetPublicAddr != null)
-	{
-		GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
-		delete g_cvNetPublicAddr;
-	}
+	if (g_cvNetPublicAddr == null)
+		g_cvNetPublicAddr = FindConVar("hostip");
+
+	GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
+	delete g_cvNetPublicAddr;
 
 	GetConVarString(g_cvRedirectURL, sURL, sizeof(sURL));
 	FormatEx(sConnect, sizeof(sConnect), "[%s:%s](%s?ip=%s&port=%s)", sNetIP, sNetPort, sURL, sNetIP, sNetPort);
