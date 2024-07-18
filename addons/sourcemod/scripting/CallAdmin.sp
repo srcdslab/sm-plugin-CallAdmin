@@ -24,7 +24,7 @@
 ConVar g_cvWebhook, g_cvWebhookRetry, g_cvAvatar, g_cvUsername, g_cvMapThumbnailURL, g_cvColor;
 ConVar g_cvChannelType, g_cvThreadName, g_cvThreadID;
 
-ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort;
+ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort, g_cvDetectionIP;
 ConVar g_cCountBots = null;
 ConVar g_cvRedirectURL = null;
 ConVar g_cvFooterIcon = null;
@@ -46,7 +46,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.0.2",
+	version = "2.0.3",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -81,6 +81,8 @@ public void OnPluginStart()
 	g_cvCooldown = CreateConVar("sm_calladmin_cooldown", "600", "Cooldown in seconds before a player can use sm_calladmin again", FCVAR_NONE);
 	g_cCountBots = CreateConVar("sm_calladmin_count_bots", "0", "Should we count bots as players ?(1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_cvAdmins = CreateConVar("sm_calladmin_block", "0", "Block calladmin usage if an admin is online?(1 = Yes, 0 = No)", FCVAR_PROTECTED, true, 0.0, true, 1.0);
+
+	g_cvDetectionIP = CreateConVar("sm_calladmin_detection_ip", "0", "Detect the public IP or net_public_adr for servers behind NAT/DHCP. [0 = Public IP | 1 = NAT/DHCP]", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 
 	AutoExecConfig(true);
 
@@ -377,24 +379,35 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	FormatEx(sCallerInfos, sizeof(sCallerInfos), "%s [%s]", sCallerInfos, sAuth);
 
 	/* Quick Connect */
-	char sConnect[256], sURL[256], sNetIP[32], sNetPort[32];
+	int iServerIP;
+	char sConnect[256], sURL[256], sNetIP[128], sNetPort[32];
 
 	g_cvPort = FindConVar("hostport");
-	if (g_cvPort != null)
-	{
-		GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
-		delete g_cvPort;
-	}
 
-	g_cvNetPublicAddr = FindConVar("net_public_adr");
-	if (g_cvNetPublicAddr != null)
+	if (g_cvDetectionIP.BoolValue)
 	{
-		GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
-		delete g_cvNetPublicAddr;
+		g_cvNetPublicAddr = FindConVar("net_public_adr");
+	}
+	else
+	{
+		g_cvNetPublicAddr = FindConVar("hostip");
+		iServerIP = GetConVarInt(g_cvNetPublicAddr);
+		int ipUnsigned = iServerIP & 0xFFFFFFFF;
+		Format(sNetIP, sizeof(sNetIP), "%d.%d.%d.%d", (ipUnsigned >> 24) & 0xFF, (ipUnsigned >> 16) & 0xFF, (ipUnsigned >> 8) & 0xFF, ipUnsigned & 0xFF);
 	}
 
 	GetConVarString(g_cvRedirectURL, sURL, sizeof(sURL));
-	FormatEx(sConnect, sizeof(sConnect), "[%s:%s](%s?ip=%s&port=%s)", sNetIP, sNetPort, sURL, sNetIP, sNetPort);
+
+	if (g_cvPort != null)
+		GetConVarString(g_cvPort, sNetPort, sizeof(sNetPort));
+
+	if (g_cvDetectionIP.BoolValue && g_cvNetPublicAddr != null)
+		GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
+
+	Format(sConnect, sizeof(sConnect), "[%s:%s](%s?ip=%s)", sNetIP, sNetPort, sURL, sNetPort);
+
+	delete g_cvPort;
+	delete g_cvNetPublicAddr;
 
 	/* Footer Icon */
 	char sFooterIcon[256];
