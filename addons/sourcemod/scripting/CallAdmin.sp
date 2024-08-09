@@ -46,7 +46,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.0.3",
+	version = "2.0.4",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -173,6 +173,12 @@ public void SetClientCookies(int client)
 
 public Action Command_CallAdmin(int client, int args)
 {
+	if (!client)
+	{
+		ReplyToCommand(client, "[SM] Cannot use this command from server console.");
+		return Plugin_Handled;
+	}
+
 	if (args < 1)
 	{
 		CPrintToChat(client, "%s sm_calladmin <reason>", CHAT_PREFIX);
@@ -187,34 +193,26 @@ public Action Command_CallAdmin(int client, int args)
 		CPrintToChat(client, "%s A configuration issue has been detected, can't send the webhook.", CHAT_PREFIX);
 		return Plugin_Handled;
 	}
+	
+	int iGagType = 0;
+	bool bIsGagged = false;
 
-	if (!client)
+	if (g_Plugin_SourceComms)
 	{
-		ReplyToCommand(client, "[SM] Cannot use this command from server console.");
-		return Plugin_Handled;
+	#if defined _sourcecomms_included
+		iGagType = SourceComms_GetClientGagType(client);
+	#endif
+		bIsGagged = iGagType > 0;
 	}
 	else
 	{
-		int iGagType = 0;
-		bool bIsGagged = false;
+		bIsGagged = BaseComm_IsClientGagged(client);
+	}
 
-		if (g_Plugin_SourceComms)
-		{
-		#if defined _sourcecomms_included
-			iGagType = SourceComms_GetClientGagType(client);
-		#endif
-			bIsGagged = iGagType > 0;
-		}
-		else
-		{
-			bIsGagged = BaseComm_IsClientGagged(client);
-		}
-
-		if (bIsGagged)
-		{
-			CPrintToChat(client, "%s You are not allowed to use {gold}Call Admin {orchid}since you are gagged.", CHAT_PREFIX);
-			return Plugin_Handled;
-		}
+	if (bIsGagged)
+	{
+		CPrintToChat(client, "%s You are not allowed to use {gold}Call Admin {orchid}since you are gagged.", CHAT_PREFIX);
+		return Plugin_Handled;
 	}
 
 	if (GetAdminFlag(GetUserAdmin(client), Admin_Ban) && !GetAdminFlag(GetUserAdmin(client), Admin_Root))
