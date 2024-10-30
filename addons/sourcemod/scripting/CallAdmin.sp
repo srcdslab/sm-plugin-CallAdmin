@@ -46,7 +46,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.0.4",
+	version = "2.0.5",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -371,8 +371,8 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 
 	/* Caller authid informations */
 	char sAuth[32];
-	GetClientAuthId(client, AuthId_Steam2, sAuth, sizeof(sAuth), false);
-	FormatEx(sCallerInfos, sizeof(sCallerInfos), "%s [%s]", sCallerInfos, sAuth);
+	GetClientAuthId(client, AuthId_Steam3, sAuth, sizeof(sAuth), false);
+	FormatEx(sCallerInfos, sizeof(sCallerInfos), "%s %s", sCallerInfos, sAuth);
 
 	/* Quick Connect */
 	char sConnect[256], sURL[256], sNetIP[32], sNetPort[32];
