@@ -24,12 +24,14 @@
 ConVar g_cvWebhook, g_cvWebhookRetry, g_cvAvatar, g_cvUsername, g_cvMapThumbnailURL, g_cvColor;
 ConVar g_cvChannelType, g_cvThreadName, g_cvThreadID;
 
-ConVar g_cvCooldown, g_cvAdmins, g_cvNetPublicAddr, g_cvPort;
+ConVar g_cvCooldown, g_cvAdmins, g_cvDetectionSound, g_cvNetPublicAddr, g_cvPort;
 ConVar g_cCountBots = null;
 ConVar g_cvRedirectURL = null;
 ConVar g_cvFooterIcon = null;
 
 Handle g_hLastUse = INVALID_HANDLE;
+
+EngineVersion gEV_Type = Engine_Unknown;
 
 int g_iLastUse[MAXPLAYERS+1] = { -1, ... }
 
@@ -41,12 +43,14 @@ bool g_Plugin_SourceComms = false;
 bool g_Plugin_ExtDiscord = false;
 bool g_Plugin_AutoRecorder = false;
 
+char g_sBeepSound[PLATFORM_MAX_PATH];
+
 public Plugin myinfo = 
 {
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.0.5",
+	version = "2.0.6",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -81,6 +85,7 @@ public void OnPluginStart()
 	g_cvCooldown = CreateConVar("sm_calladmin_cooldown", "600", "Cooldown in seconds before a player can use sm_calladmin again", FCVAR_NONE);
 	g_cCountBots = CreateConVar("sm_calladmin_count_bots", "0", "Should we count bots as players ?(1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_cvAdmins = CreateConVar("sm_calladmin_block", "0", "Block calladmin usage if an admin is online?(1 = Yes, 0 = No)", FCVAR_PROTECTED, true, 0.0, true, 1.0);
+	g_cvDetectionSound = CreateConVar("sm_calladmin_detection_sound", "1", "Emit a beep sound when someone gets flagged [0 = disabled, 1 = enabled]", 0, true, 0.0, true, 1.0);
 
 	AutoExecConfig(true);
 
@@ -137,6 +142,22 @@ public void OnLibraryRemoved(const char[] sName)
 		g_Plugin_ExtDiscord = false;
 	if (strcmp(sName, "AutoRecorder", false) == 0)
 		g_Plugin_AutoRecorder = false;
+}
+
+public void OnMapStart()
+{
+	Handle hConfig = LoadGameConfigFile("funcommands.games");
+
+	if (hConfig == null)
+	{
+		SetFailState("Unable to load game config funcommands.games");
+		return;
+	}
+
+	if (GameConfGetKeyValue(hConfig, "SoundBeep", g_sBeepSound, PLATFORM_MAX_PATH))
+		PrecacheSound(g_sBeepSound, true);
+
+	delete hConfig;
 }
 
 public void OnClientPutInServer(int client)
@@ -275,6 +296,13 @@ public Action Command_CallAdmin(int client, int args)
 			if (GetAdminFlag(GetUserAdmin(i), Admin_Ban))
 			{
 				CPrintToChat(i, "%s {olive}%N {orchid}has called an admin ({default}Reason: %s{orchid})", CHAT_PREFIX, client, sReason);
+				if (g_cvDetectionSound.BoolValue)
+				{
+					if (gEV_Type == Engine_CSS || gEV_Type == Engine_TF2)
+						EmitSoundToClient(i, g_sBeepSound);
+					else
+						ClientCommand(i, "play */%s", g_sBeepSound);
+				}
 				continue;
 			}
 		}
