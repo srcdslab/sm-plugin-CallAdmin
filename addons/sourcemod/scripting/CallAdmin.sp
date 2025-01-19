@@ -36,12 +36,24 @@ EngineVersion gEV_Type = Engine_Unknown;
 int g_iLastUse[MAXPLAYERS+1] = { -1, ... }
 
 bool g_bLate = false;
+
 bool g_Plugin_AFKManager = false;
 bool g_Plugin_ZR = false;
 bool g_Plugin_SourceBans = false;
 bool g_Plugin_SourceComms = false;
 bool g_Plugin_ExtDiscord = false;
 bool g_Plugin_AutoRecorder = false;
+
+bool g_bNative_AFKManager = false;
+bool g_bNative_SbComms_GagType = false;
+bool g_bNative_SbChecker_Bans = false;
+bool g_bNative_SbChecker_Mutes = false;
+bool g_bNative_SbChecker_Gags = false;
+bool g_bNative_ExtDiscord = false;
+bool g_bNative_AutoRecorder_DemoRecording = false;
+bool g_bNative_AutoRecorder_DemoRecordCount = false;
+bool g_bNative_AutoRecorder_DemoRecordingTick = false;
+bool g_bNative_AutoRecorder_DemoRecordingTime = false;
 
 char g_sBeepSound[PLATFORM_MAX_PATH];
 
@@ -50,7 +62,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.0.6",
+	version = "2.1.0",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -110,6 +122,8 @@ public void OnAllPluginsLoaded()
 	g_Plugin_ExtDiscord = LibraryExists("ExtendedDiscord");
 	g_Plugin_AutoRecorder = LibraryExists("AutoRecorder");
 	g_Plugin_ZR = LibraryExists("zombiereloaded");
+
+	VerifyNatives();
 }
 
 public void OnLibraryAdded(const char[] sName)
@@ -117,15 +131,30 @@ public void OnLibraryAdded(const char[] sName)
 	if (strcmp(sName, "zombiereloaded", false) == 0)
 		g_Plugin_ZR = true;
 	if (strcmp(sName, "AFKManager", false) == 0)
+	{
 		g_Plugin_AFKManager = true;
+		VerifyNative_AFKManager();
+	}
 	if (strcmp(sName, "sourcebans++", false) == 0)
+	{
 		g_Plugin_SourceBans = true;
+		VerifyNative_SbChecker();
+	}
 	if (strcmp(sName, "sourcecomms++", false) == 0)
+	{
 		g_Plugin_SourceComms = true;
+		VerifyNative_SbComms();
+	}
 	if (strcmp(sName, "ExtendedDiscord", false) == 0)
+	{
 		g_Plugin_ExtDiscord = true;
+		VerifyNative_ExtDiscord();
+	}
 	if (strcmp(sName, "AutoRecorder", false) == 0)
+	{
 		g_Plugin_AutoRecorder = true;
+		VerifyNative_AutoRecorder();
+	}
 }
 
 public void OnLibraryRemoved(const char[] sName)
@@ -133,15 +162,69 @@ public void OnLibraryRemoved(const char[] sName)
 	if (strcmp(sName, "zombiereloaded", false) == 0)
 		g_Plugin_ZR = false;
 	if (strcmp(sName, "AFKManager", false) == 0)
+	{
 		g_Plugin_AFKManager = false;
+		VerifyNative_AFKManager();
+	}
 	if (strcmp(sName, "sourcebans++", false) == 0)
+	{
 		g_Plugin_SourceBans = false;
+		VerifyNative_SbChecker();
+	}
 	if (strcmp(sName, "sourcecomms++", false) == 0)
+	{
 		g_Plugin_SourceComms = false;
+		VerifyNative_SbComms();
+	}
 	if (strcmp(sName, "ExtendedDiscord", false) == 0)
+	{
 		g_Plugin_ExtDiscord = false;
+		VerifyNative_ExtDiscord();
+	}
 	if (strcmp(sName, "AutoRecorder", false) == 0)
+	{
 		g_Plugin_AutoRecorder = false;
+		VerifyNative_AutoRecorder();
+	}
+}
+
+stock void VerifyNatives()
+{
+	VerifyNative_AFKManager();
+	VerifyNative_SbComms();
+	VerifyNative_SbChecker();
+	VerifyNative_ExtDiscord();
+	VerifyNative_AutoRecorder();
+}
+
+stock void VerifyNative_AFKManager()
+{
+	g_bNative_AFKManager = g_Plugin_AFKManager && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "GetClientIdleTime") == FeatureStatus_Available;
+}
+
+stock void VerifyNative_SbComms()
+{
+	g_bNative_SbComms_GagType = g_Plugin_SourceComms && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SourceComms_GetClientGagType") == FeatureStatus_Available;
+}
+
+stock void VerifyNative_SbChecker()
+{
+	g_bNative_SbChecker_Bans = g_Plugin_SourceBans && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SBPP_CheckerGetClientsBans") == FeatureStatus_Available;
+	g_bNative_SbChecker_Mutes = g_Plugin_SourceBans && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SBPP_CheckerGetClientsMutes") == FeatureStatus_Available;
+	g_bNative_SbChecker_Gags = g_Plugin_SourceBans && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SBPP_CheckerGetClientsGags") == FeatureStatus_Available;
+}
+
+stock void VerifyNative_ExtDiscord()
+{
+	g_bNative_ExtDiscord = g_Plugin_ExtDiscord && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "ExtendedDiscord_LogError") == FeatureStatus_Available;
+}
+
+stock void VerifyNative_AutoRecorder()
+{
+	g_bNative_AutoRecorder_DemoRecording = g_Plugin_AutoRecorder && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "AutoRecorder_IsDemoRecording") == FeatureStatus_Available;
+	g_bNative_AutoRecorder_DemoRecordCount = g_Plugin_AutoRecorder && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "AutoRecorder_GetDemoRecordCount") == FeatureStatus_Available;
+	g_bNative_AutoRecorder_DemoRecordingTick = g_Plugin_AutoRecorder && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "AutoRecorder_GetDemoRecordingTick") == FeatureStatus_Available;
+	g_bNative_AutoRecorder_DemoRecordingTime = g_Plugin_AutoRecorder && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "AutoRecorder_GetDemoRecordingTime") == FeatureStatus_Available;
 }
 
 public void OnMapStart()
@@ -218,7 +301,7 @@ public Action Command_CallAdmin(int client, int args)
 	int iGagType = 0;
 	bool bIsGagged = false;
 
-	if (g_Plugin_SourceComms)
+	if (g_bNative_SbComms_GagType)
 	{
 	#if defined _sourcecomms_included
 		iGagType = SourceComms_GetClientGagType(client);
@@ -262,7 +345,7 @@ public Action Command_CallAdmin(int client, int args)
 			if (GetAdminFlag(GetUserAdmin(i), Admin_Ban))
 			{
 			#if defined _AFKManager_Included
-				if (g_Plugin_AFKManager)
+				if (g_bNative_AFKManager)
 				{
 					int IdleTime = GetClientIdleTime(i);
 					if (IdleTime > 30)
@@ -386,16 +469,23 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	GetClientAuthId(client, AuthId_SteamID64, sSteamID64, sizeof(sSteamID64));
 	FormatEx(sProfile, sizeof(sProfile), "[`%N`](<https://steamcommunity.com/profiles/%s>)", client, sSteamID64);
 
-#if defined _sourcebanschecker_included
-	/* Caller bans informations */
-	if (g_Plugin_SourceBans)
-	{
-		int iClientBans = SBPP_CheckerGetClientsBans(client);
-		int iClientComms = SBPP_CheckerGetClientsComms(client);
+	int iClientBans = 0;
+	int iClientGags = 0;
+	int iClientMutes = 0;
 
-		FormatEx(sCallerInfos, sizeof(sCallerInfos), "%s (%d bans - %d comms)", sProfile, iClientBans, iClientComms);
-	}
+#if defined _sourcebanschecker_included
+	/* Caller bans informations added to caller informations */
+	if (g_bNative_SbChecker_Bans)
+		iClientBans = SBPP_CheckerGetClientsBans(client);
+
+	if (g_bNative_SbChecker_Mutes)
+		iClientMutes = SBPP_CheckerGetClientsMutes(client);
+
+	if (g_bNative_SbChecker_Gags)
+		iClientGags = SBPP_CheckerGetClientsGags(client);
 #endif
+
+	FormatEx(sCallerInfos, sizeof(sCallerInfos), "%s (%d bans - %d mutes - %d gags)", sProfile, iClientBans, iClientMutes, iClientGags);
 
 	/* Caller authid informations */
 	char sAuth[32];
@@ -501,12 +591,22 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 
 	#if defined _autorecorder_included
 	/* Get all demos informations */
-	if (g_Plugin_AutoRecorder && AutoRecorder_IsDemoRecording())
+	if (g_bNative_AutoRecorder_DemoRecording && AutoRecorder_IsDemoRecording())
 	{
 		char sDate[32], sRecord[256];
-		int iCount = AutoRecorder_GetDemoRecordCount();
-		int iTick = AutoRecorder_GetDemoRecordingTick();
-		int retValTime = AutoRecorder_GetDemoRecordingTime();
+
+		int iCount = -1;
+		if (g_bNative_AutoRecorder_DemoRecordCount)
+			iCount = AutoRecorder_GetDemoRecordCount();
+
+		int iTick = -1;
+		if (g_bNative_AutoRecorder_DemoRecordingTick)
+			iTick = AutoRecorder_GetDemoRecordingTick();
+		
+		int retValTime = -1;
+		if (g_bNative_AutoRecorder_DemoRecordingTime)
+			retValTime = AutoRecorder_GetDemoRecordingTime();
+
 		if (retValTime == -1)
 			FormatEx(sDate, sizeof(sDate), "N/A");
 		else
@@ -569,7 +669,7 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 			return;
 		} else {
 			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
-			if (!g_Plugin_ExtDiscord)
+			if (!g_bNative_ExtDiscord)
 			{
 				LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
 				LogError("[%s] %L tried to Call an Admin with the following reason: %s", PLUGIN_NAME, client, sReason);
