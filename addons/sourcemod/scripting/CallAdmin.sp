@@ -62,7 +62,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.1.0",
+	version = "2.1.1",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -130,27 +130,27 @@ public void OnLibraryAdded(const char[] sName)
 {
 	if (strcmp(sName, "zombiereloaded", false) == 0)
 		g_Plugin_ZR = true;
-	if (strcmp(sName, "AFKManager", false) == 0)
+	else if (strcmp(sName, "AFKManager", false) == 0)
 	{
 		g_Plugin_AFKManager = true;
 		VerifyNative_AFKManager();
 	}
-	if (strcmp(sName, "sourcebans++", false) == 0)
+	else if (strcmp(sName, "sourcebans++", false) == 0)
 	{
 		g_Plugin_SourceBans = true;
 		VerifyNative_SbChecker();
 	}
-	if (strcmp(sName, "sourcecomms++", false) == 0)
+	else if (strcmp(sName, "sourcecomms++", false) == 0)
 	{
 		g_Plugin_SourceComms = true;
 		VerifyNative_SbComms();
 	}
-	if (strcmp(sName, "ExtendedDiscord", false) == 0)
+	else if (strcmp(sName, "ExtendedDiscord", false) == 0)
 	{
 		g_Plugin_ExtDiscord = true;
 		VerifyNative_ExtDiscord();
 	}
-	if (strcmp(sName, "AutoRecorder", false) == 0)
+	else if (strcmp(sName, "AutoRecorder", false) == 0)
 	{
 		g_Plugin_AutoRecorder = true;
 		VerifyNative_AutoRecorder();
@@ -161,27 +161,27 @@ public void OnLibraryRemoved(const char[] sName)
 {
 	if (strcmp(sName, "zombiereloaded", false) == 0)
 		g_Plugin_ZR = false;
-	if (strcmp(sName, "AFKManager", false) == 0)
+	else if (strcmp(sName, "AFKManager", false) == 0)
 	{
 		g_Plugin_AFKManager = false;
 		VerifyNative_AFKManager();
 	}
-	if (strcmp(sName, "sourcebans++", false) == 0)
+	else if (strcmp(sName, "sourcebans++", false) == 0)
 	{
 		g_Plugin_SourceBans = false;
 		VerifyNative_SbChecker();
 	}
-	if (strcmp(sName, "sourcecomms++", false) == 0)
+	else if (strcmp(sName, "sourcecomms++", false) == 0)
 	{
 		g_Plugin_SourceComms = false;
 		VerifyNative_SbComms();
 	}
-	if (strcmp(sName, "ExtendedDiscord", false) == 0)
+	else if (strcmp(sName, "ExtendedDiscord", false) == 0)
 	{
 		g_Plugin_ExtDiscord = false;
 		VerifyNative_ExtDiscord();
 	}
-	if (strcmp(sName, "AutoRecorder", false) == 0)
+	else if (strcmp(sName, "AutoRecorder", false) == 0)
 	{
 		g_Plugin_AutoRecorder = false;
 		VerifyNative_AutoRecorder();
