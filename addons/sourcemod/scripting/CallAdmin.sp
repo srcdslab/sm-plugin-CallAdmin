@@ -6,6 +6,7 @@
 
 #include <discordWebhookAPI>
 #include <multicolors>
+#include <utilshelper>
 
 #undef REQUIRE_PLUGIN
 #tryinclude <AFKManager>
@@ -62,7 +63,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.1.1",
+	version = "2.1.2",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -727,12 +728,4 @@ stock int GetPlayerCountByTeam(int team, bool alive = false)
 			count++;
 	}
 	return count;
-}
-
-stock void StringToLowerCase(char[] input)
-{
-	for (int i = 0; i < strlen(input); i++)
-	{
-		input[i] = CharToLower(input[i]);
-	}
 }
