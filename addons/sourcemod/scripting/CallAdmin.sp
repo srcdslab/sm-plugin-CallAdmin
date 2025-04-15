@@ -40,7 +40,7 @@ bool g_bLate = false;
 
 bool g_Plugin_AFKManager = false;
 bool g_Plugin_ZR = false;
-bool g_Plugin_SourceBans = false;
+bool g_Plugin_SourceChecker = false;
 bool g_Plugin_SourceComms = false;
 bool g_Plugin_ExtDiscord = false;
 bool g_Plugin_AutoRecorder = false;
@@ -63,7 +63,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.1.2",
+	version = "2.2.0",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -118,7 +118,7 @@ public void OnPluginStart()
 public void OnAllPluginsLoaded()
 {
 	g_Plugin_AFKManager = LibraryExists("AFKManager");
-	g_Plugin_SourceBans = LibraryExists("sourcebans++");
+	g_Plugin_SourceChecker = LibraryExists("sourcechecker++");
 	g_Plugin_SourceComms = LibraryExists("sourcecomms++");
 	g_Plugin_ExtDiscord = LibraryExists("ExtendedDiscord");
 	g_Plugin_AutoRecorder = LibraryExists("AutoRecorder");
@@ -136,9 +136,9 @@ public void OnLibraryAdded(const char[] sName)
 		g_Plugin_AFKManager = true;
 		VerifyNative_AFKManager();
 	}
-	else if (strcmp(sName, "sourcebans++", false) == 0)
+	else if (strcmp(sName, "sourcechecker++", false) == 0)
 	{
-		g_Plugin_SourceBans = true;
+		g_Plugin_SourceChecker = true;
 		VerifyNative_SbChecker();
 	}
 	else if (strcmp(sName, "sourcecomms++", false) == 0)
@@ -167,9 +167,9 @@ public void OnLibraryRemoved(const char[] sName)
 		g_Plugin_AFKManager = false;
 		VerifyNative_AFKManager();
 	}
-	else if (strcmp(sName, "sourcebans++", false) == 0)
+	else if (strcmp(sName, "sourcechecker++", false) == 0)
 	{
-		g_Plugin_SourceBans = false;
+		g_Plugin_SourceChecker = false;
 		VerifyNative_SbChecker();
 	}
 	else if (strcmp(sName, "sourcecomms++", false) == 0)
@@ -210,9 +210,9 @@ stock void VerifyNative_SbComms()
 
 stock void VerifyNative_SbChecker()
 {
-	g_bNative_SbChecker_Bans = g_Plugin_SourceBans && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SBPP_CheckerGetClientsBans") == FeatureStatus_Available;
-	g_bNative_SbChecker_Mutes = g_Plugin_SourceBans && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SBPP_CheckerGetClientsMutes") == FeatureStatus_Available;
-	g_bNative_SbChecker_Gags = g_Plugin_SourceBans && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SBPP_CheckerGetClientsGags") == FeatureStatus_Available;
+	g_bNative_SbChecker_Bans = g_Plugin_SourceChecker && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SBPP_CheckerGetClientsBans") == FeatureStatus_Available;
+	g_bNative_SbChecker_Mutes = g_Plugin_SourceChecker && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SBPP_CheckerGetClientsMutes") == FeatureStatus_Available;
+	g_bNative_SbChecker_Gags = g_Plugin_SourceChecker && CanTestFeatures() && GetFeatureStatus(FeatureType_Native, "SBPP_CheckerGetClientsGags") == FeatureStatus_Available;
 }
 
 stock void VerifyNative_ExtDiscord()
