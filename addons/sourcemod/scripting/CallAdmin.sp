@@ -63,7 +63,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.2.0",
+	version = "2.2.1",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -102,15 +102,14 @@ public void OnPluginStart()
 
 	AutoExecConfig(true);
 
-	// Late load
 	if (g_bLate)
 	{
 		for (int i = 1; i <= MaxClients; i++)
 		{
-			if (IsClientConnected(i))
-			{
-				OnClientPutInServer(i);
-			}
+			if (!IsClientConnected(i) || IsFakeClient(i) || !AreClientCookiesCached(i))
+				continue;
+
+			ReadClientCookies(i);
 		}
 	}
 }
@@ -242,17 +241,6 @@ public void OnMapStart()
 		PrecacheSound(g_sBeepSound, true);
 
 	delete hConfig;
-}
-
-public void OnClientPutInServer(int client)
-{
-	if (AreClientCookiesCached(client))
-		ReadClientCookies(client);
-}
-
-public void OnClientDisconnect(int client)
-{
-	SetClientCookies(client);
 }
 
 public void OnClientCookiesCached(int client)
@@ -691,6 +679,8 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 
 		LogAction(client, -1, "%L has called an Admin. (Reason: %s)", client, sReason);
 		CPrintToChat(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result in a chat block", CHAT_PREFIX);
+
+		SetClientCookies(client);
 	}
 
 	retries = 0;
