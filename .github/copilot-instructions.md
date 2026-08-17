@@ -6,8 +6,8 @@ This repository contains a SourcePawn plugin for SourceMod called "CallAdmin" th
 ## Technical Environment
 - **Language**: SourcePawn (version 1.11+, minimum 1.12+ for new development)
 - **Platform**: SourceMod 1.12+ (latest stable release)
-- **Compiler**: SourcePawn compiler (spcomp) via SourceKnight build system
-- **Build Tool**: SourceKnight v0.2 (dependency management and compilation)
+- **Compiler**: SourcePawn compiler (spcomp), installed via the `rumblefrog/setup-sp` GitHub Action
+- **Build Tool**: Native GitHub Actions workflow (dependency cloning and compilation)
 - **CI/CD**: GitHub Actions with automated building and releases
 
 ## Project Structure
@@ -17,7 +17,6 @@ This repository contains a SourcePawn plugin for SourceMod called "CallAdmin" th
 │   └── CallAdmin.sp                 # Main plugin source code
 ├── .github/
 │   └── workflows/ci.yml            # CI/CD pipeline
-├── sourceknight.yaml              # Build configuration and dependencies
 ├── README.md                       # Project documentation
 └── .gitignore                      # Git ignore rules
 ```
@@ -77,25 +76,23 @@ stock void VerifyNative_AFKManager() {
 ```
 
 ## Build Process
-### Using SourceKnight
+### Using GitHub Actions (`.github/workflows/ci.yml`)
 ```bash
-# Install SourceKnight (Python package)
-pip install sourceknight
+# Locally, with a SourceMod 1.12 spcomp binary and cloned dependency includes
+# placed under addons/sourcemod/scripting/include/:
+cd addons/sourcemod/scripting
+spcomp -i include -o ../plugins/CallAdmin.smx CallAdmin.sp
 
-# Build the plugin
-sourceknight build
-
-# Output location: /addons/sourcemod/plugins/CallAdmin.smx
+# Output location: addons/sourcemod/plugins/CallAdmin.smx
 ```
 
-### Build Configuration (sourceknight.yaml)
-- Automatically downloads SourceMod 1.11.0-git6934
-- Fetches all dependencies from GitHub repositories
-- Compiles to `.smx` files in the plugins directory
-- **Note**: There's a typo in line 67 (`includea` should be `include`) that should be fixed
+### Build Configuration (`.github/workflows/ci.yml`)
+- Installs SourceMod 1.12.x spcomp via `rumblefrog/setup-sp`
+- Clones each `type: git`-equivalent dependency directly with `git clone --depth=1` and copies its include files into `addons/sourcemod/scripting/include/`
+- Compiles `CallAdmin.sp` to a `.smx` file in the plugins directory
 
 ### CI/CD Pipeline
-- Builds on Ubuntu 24.04
+- Builds on `ubuntu-latest`
 - Creates release packages automatically
 - Tags latest builds from main/master branch
 - Uploads artifacts and creates GitHub releases
@@ -207,7 +204,7 @@ The plugin auto-generates configuration file with these key ConVars:
 
 ## Common Modification Patterns
 1. **Adding New Discord Fields**: Create EmbedField, set properties, add to embed
-2. **New Plugin Integration**: Add to sourceknight.yaml dependencies, add conditional includes, implement native checking
+2. **New Plugin Integration**: Add a clone+copy step for the new dependency in `.github/workflows/ci.yml`, add conditional includes, implement native checking
 3. **ConVar Addition**: Add to OnPluginStart(), document in configuration section
 4. **Command Extensions**: Use RegConsoleCmd() with proper permission checking
 
