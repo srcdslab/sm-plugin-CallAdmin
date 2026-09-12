@@ -23,7 +23,7 @@
 #define CHAT_PREFIX "{gold}[Call Admin]{orchid}"
 
 ConVar g_cvWebhook, g_cvWebhookRetry, g_cvAvatar, g_cvUsername, g_cvMapThumbnailURL, g_cvColor;
-ConVar g_cvChannelType, g_cvThreadName, g_cvThreadID;
+ConVar g_cvThreadName, g_cvThreadID;
 
 ConVar g_cvCooldown, g_cvAdmins, g_cvDetectionSound, g_cvNetPublicAddr, g_cvPort;
 ConVar g_cCountBots = null;
@@ -63,7 +63,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.2.2",
+	version = "2.3.0",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -86,7 +86,6 @@ public void OnPluginStart()
 	g_cvUsername = CreateConVar("sm_calladmin_username", "CallAdmin", "Discord username.");
 	g_cvWebhookRetry = CreateConVar("sm_calladmin_webhook_retry", "3", "Number of retries if webhook fails.", FCVAR_PROTECTED);
 	g_cvRedirectURL = CreateConVar("sm_calladmin_redirect", "https://nide.gg/connect/", "URL to your redirect.php file.");
-	g_cvChannelType = CreateConVar("sm_calladmin_channel_type", "0", "Type of your channel: (1 = Thread, 0 = Classic Text channel");
 	g_cvMapThumbnailURL = CreateConVar("sm_calladmin_mapthumbnailurl", "https://bans.nide.gg/images/maps/", "URL where you store map thumbail files. (.JPG ONLY)");
 	g_cvColor = CreateConVar("sm_calladmin_color", "4244579", "Decimal color code for the embed. \nHex to Decimal - https://www.binaryhexconverter.com/hex-to-decimal-converter");
 	g_cvFooterIcon = CreateConVar("sm_calladmin_footer_icon", "https://github.githubassets.com/images/icons/emoji/unicode/1f55c.png?v8", "Url to the footer icon.");
@@ -354,8 +353,15 @@ public Action Command_CallAdmin(int client, int args)
 
 	char sReason[256];
 	GetCmdArgString(sReason, sizeof(sReason));
-	ReplaceString(sReason, sizeof(sReason), "\\n", "\n");
-	SendWebHook(GetClientUserId(client), sReason, sWebhookURL);
+
+	char sEscapedMessage[256];
+	FormatEx(sEscapedMessage, sizeof(sEscapedMessage), "%s", sReason);
+	ReplaceString(sEscapedMessage, sizeof(sEscapedMessage), "`", "'");
+	ReplaceString(sEscapedMessage, sizeof(sEscapedMessage), "> ", ">");
+	ReplaceString(sEscapedMessage, sizeof(sEscapedMessage), "/", "୵"); // Prevent URLs from being embedded
+	ReplaceString(sEscapedMessage, sizeof(sEscapedMessage), "@", "ⓐ"); // Because it is a webhook, it bypasses the permission
+	ReplaceString(sEscapedMessage, sizeof(sEscapedMessage), "\"", ""); // Prevent messages from being cut off
+	SendWebHook(GetClientUserId(client), sEscapedMessage, sWebhookURL);
 
 	if (g_cvAdmins.IntValue < 1)
 	{
@@ -388,25 +394,10 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	Webhook webhook = new Webhook("||@here||");
 
 	int client = GetClientOfUserId(userid);
-	bool IsThread = g_cvChannelType.BoolValue;
 	char sThreadID[32], sThreadName[WEBHOOK_THREAD_NAME_MAX_SIZE];
 
 	g_cvThreadID.GetString(sThreadID, sizeof sThreadID);
 	g_cvThreadName.GetString(sThreadName, sizeof sThreadName);
-
-	if (IsThread) {
-		if (!sThreadName[0] && !sThreadID[0]) {
-			LogError("Thread Name or ThreadID not found or specified.");
-			CPrintToChat(client, "%s Oops something is wrong on server side, can't send the weebhook.", CHAT_PREFIX);
-			delete webhook;
-			return;
-		} else {
-			if (strlen(sThreadName) > 0) {
-				webhook.SetThreadName(sThreadName);
-				sThreadID[0] = '\0';
-			}
-		}
-	}
 
 	/* Webhook UserName */
 	char sName[128];
@@ -620,10 +611,7 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	webhook.AddEmbed(Embed_1);
 
 	DataPack pack = new DataPack();
-	if (IsThread && strlen(sThreadName) <= 0 && strlen(sThreadID) > 0)
-		pack.WriteCell(1);
-	else
-		pack.WriteCell(0);
+
 	pack.WriteCell(userid);
 	pack.WriteString(sReason);
 	pack.WriteString(sWebhookURL);
@@ -638,7 +626,6 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 	static int retries = 0;
 	pack.Reset();
 
-	bool IsThreadReply = pack.ReadCell();
 	int userid = pack.ReadCell();
 	int client = GetClientOfUserId(userid);
 
@@ -648,11 +635,11 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 
 	delete pack;
 	
-	if ((!IsThreadReply && response.Status != HTTPStatus_OK) || (IsThreadReply && response.Status != HTTPStatus_NoContent))
+	if (response.Status != HTTPStatus_OK && response.Status != HTTPStatus_NoContent)
 	{
 		if (retries < g_cvWebhookRetry.IntValue) {
 			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries + 1);
-			PrintToServer("[CallAdmin] Failed to send the webhook. Resending it .. (%d/%d)", retries + 1, g_cvWebhookRetry.IntValue);
+			PrintToServer("[CallAdmin] Failed to send the webhook (HTTP %d). Resending it .. (%d/%d)", view_as<int>(response.Status), retries + 1, g_cvWebhookRetry.IntValue);
 			SendWebHook(userid, sReason, sWebhookURL);
 			retries++;
 			return;
@@ -660,13 +647,13 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
 			if (!g_bNative_ExtDiscord)
 			{
-				LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+				LogError("[%s] Failed to send the webhook after %d retries (last HTTP status: %d), aborting.", PLUGIN_NAME, retries, view_as<int>(response.Status));
 				LogError("[%s] %L tried to Call an Admin with the following reason: %s", PLUGIN_NAME, client, sReason);
 			}
 		#if defined _extendeddiscord_included
 			else
 			{
-				ExtendedDiscord_LogError("[%s] Failed to send the webhook after %d retries, aborting.", PLUGIN_NAME, retries);
+				ExtendedDiscord_LogError("[%s] Failed to send the webhook after %d retries (last HTTP status: %d), aborting.", PLUGIN_NAME, retries, view_as<int>(response.Status));
 				ExtendedDiscord_LogError("[%s] %L tried to Call an Admin with the following reason: %s", PLUGIN_NAME, client, sReason);
 			}
 		#endif
