@@ -63,7 +63,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.3.0",
+	version = "2.3.1",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -389,7 +389,7 @@ public Action Command_CallAdmin(int client, int args)
 	return Plugin_Handled;
 }
 
-stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_URL_MAX_SIZE])
+stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_URL_MAX_SIZE], int retries = 0)
 {
 	Webhook webhook = new Webhook("||@here||");
 
@@ -615,6 +615,7 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	pack.WriteCell(userid);
 	pack.WriteString(sReason);
 	pack.WriteString(sWebhookURL);
+	pack.WriteCell(retries);
 
 	/* Push the message */
 	webhook.Execute(sWebhookURL, OnWebHookExecuted, pack, sThreadID);
@@ -623,7 +624,6 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 
 public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 {
-	static int retries = 0;
 	pack.Reset();
 
 	int userid = pack.ReadCell();
@@ -632,16 +632,16 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 	char sReason[256], sWebhookURL[WEBHOOK_URL_MAX_SIZE];
 	pack.ReadString(sReason, sizeof(sReason));
 	pack.ReadString(sWebhookURL, sizeof(sWebhookURL));
+	int retries = pack.ReadCell();
 
 	delete pack;
-	
+
 	if (response.Status != HTTPStatus_OK && response.Status != HTTPStatus_NoContent)
 	{
 		if (retries < g_cvWebhookRetry.IntValue) {
 			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries + 1);
 			PrintToServer("[CallAdmin] Failed to send the webhook (HTTP %d). Resending it .. (%d/%d)", view_as<int>(response.Status), retries + 1, g_cvWebhookRetry.IntValue);
-			SendWebHook(userid, sReason, sWebhookURL);
-			retries++;
+			SendWebHook(userid, sReason, sWebhookURL, retries + 1);
 			return;
 		} else {
 			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
@@ -669,8 +669,6 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 
 		SetClientCookies(client);
 	}
-
-	retries = 0;
 }
 
 stock int GetClientCountEx(bool countBots)
