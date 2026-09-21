@@ -63,7 +63,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.3.0",
+	version = "2.3.1",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
