@@ -30,7 +30,7 @@ ConVar g_cCountBots = null;
 ConVar g_cvRedirectURL = null;
 ConVar g_cvFooterIcon = null;
 
-Handle g_hLastUse = INVALID_HANDLE;
+Cookie g_hLastUse = null;
 
 EngineVersion gEV_Type = Engine_Unknown;
 
@@ -63,7 +63,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.3.1",
+	version = "2.3.2",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -78,7 +78,7 @@ public void OnPluginStart()
 {
 	RegConsoleCmd("sm_calladmin", Command_CallAdmin, "Send a message to call admins.");
 
-	g_hLastUse = RegClientCookie("calladmin_last_use", "Last call admin", CookieAccess_Protected);
+	g_hLastUse = new Cookie("calladmin_last_use", "Last call admin", CookieAccess_Protected);
 
 	/* General config */
 	g_cvWebhook = CreateConVar("sm_calladmin_webhook", "", "The webhook URL of your Discord channel.", FCVAR_PROTECTED);
@@ -228,7 +228,7 @@ stock void VerifyNative_AutoRecorder()
 
 public void OnMapStart()
 {
-	Handle hConfig = LoadGameConfigFile("funcommands.games");
+	GameData hConfig = new GameData("funcommands.games");
 
 	if (hConfig == null)
 	{
@@ -236,7 +236,7 @@ public void OnMapStart()
 		return;
 	}
 
-	if (GameConfGetKeyValue(hConfig, "SoundBeep", g_sBeepSound, PLATFORM_MAX_PATH))
+	if (hConfig.GetKeyValue("SoundBeep", g_sBeepSound, PLATFORM_MAX_PATH))
 		PrecacheSound(g_sBeepSound, true);
 
 	delete hConfig;
@@ -251,7 +251,7 @@ public void ReadClientCookies(int client)
 {
 	char sValue[32];
 
-	GetClientCookie(client, g_hLastUse, sValue, sizeof(sValue));
+	g_hLastUse.Get(client, sValue, sizeof(sValue));
 	g_iLastUse[client] = (sValue[0] == '\0' ? 0 : StringToInt(sValue));
 }
 
@@ -260,7 +260,7 @@ public void SetClientCookies(int client)
 	char sValue[32];
 
 	FormatEx(sValue, sizeof(sValue), "%i", g_iLastUse[client]);
-	SetClientCookie(client, g_hLastUse, sValue);
+	g_hLastUse.Set(client, sValue);
 }
 
 public Action Command_CallAdmin(int client, int args)
@@ -478,7 +478,7 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	g_cvPort = FindConVar("hostport");
 	if (g_cvPort != null)
 	{
-		GetConVarString(g_cvPort, sNetPort, sizeof (sNetPort));
+		g_cvPort.GetString(sNetPort, sizeof (sNetPort));
 		delete g_cvPort;
 	}
 
@@ -486,20 +486,20 @@ stock void SendWebHook(int userid, char sReason[256], char sWebhookURL[WEBHOOK_U
 	if (g_cvNetPublicAddr == null)
 		g_cvNetPublicAddr = FindConVar("hostip");
 
-	GetConVarString(g_cvNetPublicAddr, sNetIP, sizeof(sNetIP));
+	g_cvNetPublicAddr.GetString(sNetIP, sizeof(sNetIP));
 	delete g_cvNetPublicAddr;
 
-	GetConVarString(g_cvRedirectURL, sURL, sizeof(sURL));
+	g_cvRedirectURL.GetString(sURL, sizeof(sURL));
 	FormatEx(sConnect, sizeof(sConnect), "[%s:%s](%s?ip=%s&port=%s)", sNetIP, sNetPort, sURL, sNetIP, sNetPort);
 
 	/* Footer Icon */
 	char sFooterIcon[256];
-	GetConVarString(g_cvFooterIcon, sFooterIcon, sizeof(sFooterIcon));
+	g_cvFooterIcon.GetString(sFooterIcon, sizeof(sFooterIcon));
 
 	/* Generate map image */
 	char sThumb[256], sThumbailURL[256];
 	StringToLowerCase(sMapNameLower);
-	GetConVarString(g_cvMapThumbnailURL, sThumbailURL, sizeof(sThumbailURL));
+	g_cvMapThumbnailURL.GetString(sThumbailURL, sizeof(sThumbailURL));
 	Format(sThumb, sizeof(sThumb), "%s/%s.jpg", sThumbailURL, sMapNameLower);
 
 	/* Clean reason */
