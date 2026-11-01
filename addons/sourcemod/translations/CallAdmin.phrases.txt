@@ -1,0 +1,116 @@
+"Phrases"
+{
+	"CallAdmin Console Not Allowed"
+	{
+		"en"		"Cannot use this command from server console."
+		"fr"		"Impossible d'utiliser cette commande depuis la console du serveur."
+		"ru"		"Эту команду нельзя использовать из консоли сервера."
+		"es"		"No se puede usar este comando desde la consola del servidor."
+		"de"		"Dieser Befehl kann nicht in der Serverkonsole verwendet werden."
+		"pt"		"Não é possível usar este comando pelo console do servidor."
+		"chi"		"无法在服务器控制台中使用此命令。"
+	}
+	"CallAdmin Usage"
+	{
+		"en"		"Usage: sm_calladmin <reason>"
+		"fr"		"Utilisation : sm_calladmin <reason>"
+		"ru"		"Использование: sm_calladmin <reason>"
+		"es"		"Uso: sm_calladmin <reason>"
+		"de"		"Verwendung: sm_calladmin <reason>"
+		"pt"		"Uso: sm_calladmin <reason>"
+		"chi"		"用法：sm_calladmin <reason>"
+	}
+	"CallAdmin Config Issue"
+	{
+		"en"		"A configuration issue has been detected, can't send the webhook."
+		"fr"		"Un problème de configuration a été détecté, impossible d'envoyer le webhook."
+		"ru"		"Обнаружена проблема конфигурации, невозможно отправить вебхук."
+		"es"		"Se detectó un problema de configuración, no se puede enviar el webhook."
+		"de"		"Ein Konfigurationsproblem wurde erkannt, der Webhook kann nicht gesendet werden."
+		"pt"		"Foi detectado um problema de configuração, não é possível enviar o webhook."
+		"chi"		"检测到配置问题，无法发送 webhook。"
+	}
+	"CallAdmin Gagged"
+	{
+		"en"		"You are not allowed to use {gold}Call Admin {orchid}since you are gagged."
+		"fr"		"Vous ne pouvez pas utiliser {gold}Call Admin {orchid}car vous êtes gag."
+		"ru"		"Вы не можете использовать {gold}Call Admin{orchid}, так как у вас гаг."
+		"es"		"No puedes usar {gold}Call Admin {orchid}porque estás silenciado."
+		"de"		"Du darfst {gold}Call Admin {orchid}nicht benutzen, da du gegaggt bist."
+		"pt"		"Você não pode usar o {gold}Call Admin {orchid}porque está gagado."
+		"chi"		"你已被禁言，无法使用 {gold}Call Admin{orchid}。"
+	}
+	"CallAdmin Admin With Ban Flag"
+	{
+		"en"		"You are an admin with the ban flag, you don't need to use this command."
+		"fr"		"Vous êtes admin avec le flag ban, vous n'avez pas besoin d'utiliser cette commande."
+		"ru"		"Вы админ с флагом бана, вам не нужно использовать эту команду."
+		"es"		"Eres admin con el flag de ban, no necesitas usar este comando."
+		"de"		"Du bist Admin mit dem Ban-Flag, du brauchst diesen Befehl nicht."
+		"pt"		"Você é admin com a flag de ban, não precisa usar esse comando."
+		"chi"		"你是拥有封禁权限的管理员，无需使用此命令。"
+	}
+	"CallAdmin Cooldown"
+	{
+		"#format"	"{1:d}"
+		"en"		"You are on cooldown, wait {default}{1} {orchid}seconds."
+		"fr"		"Vous êtes en cooldown, attendez {default}{1} {orchid}secondes."
+		"ru"		"Перезарядка, подождите {default}{1} {orchid}сек."
+		"es"		"Estás en enfriamiento, espera {default}{1} {orchid}segundos."
+		"de"		"Du hast noch Abklingzeit, warte {default}{1} {orchid}Sekunden."
+		"pt"		"Você está em cooldown, aguarde {default}{1} {orchid}segundos."
+		"chi"		"冷却中，请等待 {default}{1} {orchid}秒。"
+	}
+	"CallAdmin Admins Online"
+	{
+		"en"		"You can't use {gold}CallAdmin {orchid}since there are admins online. Type {red}!admins {orchid}to check currently online admins."
+		"fr"		"Vous ne pouvez pas utiliser {gold}CallAdmin {orchid}car des admins sont en ligne. Tapez {red}!admins {orchid}pour voir les admins en ligne."
+		"ru"		"Нельзя использовать {gold}CallAdmin{orchid}: на сервере есть админы. Введите {red}!admins{orchid}, чтобы их увидеть."
+		"es"		"No puedes usar {gold}CallAdmin {orchid}porque hay admins conectados. Escribe {red}!admins {orchid}para ver los admins conectados."
+		"de"		"Du kannst {gold}CallAdmin {orchid}nicht benutzen, da Admins online sind. Gib {red}!admins {orchid}ein, um sie anzuzeigen."
+		"pt"		"Você não pode usar o {gold}CallAdmin {orchid}porque há admins online. Digite {red}!admins {orchid}para ver os admins online."
+		"chi"		"当前有管理员在线，你无法使用 {gold}CallAdmin{orchid}。输入 {red}!admins {orchid}查看在线管理员。"
+	}
+	"CallAdmin Admin Notify"
+	{
+		"#format"	"{1:N},{2:s}"
+		"en"		"{olive}{1} {orchid}has called an admin ({default}Reason: {2}{orchid})"
+		"fr"		"{olive}{1} {orchid}a appelé un admin ({default}Raison : {2}{orchid})"
+		"ru"		"{olive}{1} {orchid}вызвал админа ({default}Причина: {2}{orchid})"
+		"es"		"{olive}{1} {orchid}ha llamado a un admin ({default}Motivo: {2}{orchid})"
+		"de"		"{olive}{1} {orchid}hat einen Admin gerufen ({default}Grund: {2}{orchid})"
+		"pt"		"{olive}{1} {orchid}chamou um admin ({default}Motivo: {2}{orchid})"
+		"chi"		"{olive}{1} {orchid}呼叫了管理员（{default}原因：{2}{orchid}）"
+	}
+	"CallAdmin Resending"
+	{
+		"#format"	"{1:d}"
+		"en"		"{red}Failed to send your message. Resending it... ({1}/3)"
+		"fr"		"{red}Échec de l'envoi de votre message. Nouvel essai... ({1}/3)"
+		"ru"		"{red}Не удалось отправить сообщение. Повторная отправка... ({1}/3)"
+		"es"		"{red}No se pudo enviar tu mensaje. Reenviando... ({1}/3)"
+		"de"		"{red}Deine Nachricht konnte nicht gesendet werden. Erneuter Versuch... ({1}/3)"
+		"pt"		"{red}Falha ao enviar sua mensagem. Reenviando... ({1}/3)"
+		"chi"		"{red}消息发送失败，正在重新发送……（{1}/3）"
+	}
+	"CallAdmin Send Error"
+	{
+		"en"		"{red}An error has occurred. Your message can't be sent."
+		"fr"		"{red}Une erreur est survenue. Votre message n'a pas pu être envoyé."
+		"ru"		"{red}Произошла ошибка. Ваше сообщение не может быть отправлено."
+		"es"		"{red}Se produjo un error. No se pudo enviar tu mensaje."
+		"de"		"{red}Ein Fehler ist aufgetreten. Deine Nachricht kann nicht gesendet werden."
+		"pt"		"{red}Ocorreu um erro. Sua mensagem não pôde ser enviada."
+		"chi"		"{red}发生错误，你的消息无法发送。"
+	}
+	"CallAdmin Message Sent"
+	{
+		"en"		"Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result in a chat block"
+		"fr"		"Message envoyé.\nN'oubliez pas que l'abus/le spam de {gold}CallAdmin {orchid}entraînera un blocage du chat"
+		"ru"		"Сообщение отправлено.\nПомните, что злоупотребление/спам {gold}CallAdmin {orchid}приведёт к блокировке чата"
+		"es"		"Mensaje enviado.\nRecuerda que el abuso/spam de {gold}CallAdmin {orchid}supondrá un bloqueo del chat"
+		"de"		"Nachricht gesendet.\nDenk daran, dass Missbrauch/Spam von {gold}CallAdmin {orchid}zu einer Chatsperre führt"
+		"pt"		"Mensagem enviada.\nLembre-se de que abuso/spam do {gold}CallAdmin {orchid}resultará em bloqueio do chat"
+		"chi"		"消息已发送。\n请注意，滥用/刷屏 {gold}CallAdmin {orchid}将导致禁言"
+	}
+}

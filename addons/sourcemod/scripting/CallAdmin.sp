@@ -63,7 +63,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.3.2",
+	version = "2.3.3",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -76,6 +76,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart()
 {
+	LoadTranslations("CallAdmin.phrases");
+
 	RegConsoleCmd("sm_calladmin", Command_CallAdmin, "Send a message to call admins.");
 
 	g_hLastUse = new Cookie("calladmin_last_use", "Last call admin", CookieAccess_Protected);
@@ -267,13 +269,13 @@ public Action Command_CallAdmin(int client, int args)
 {
 	if (!client)
 	{
-		ReplyToCommand(client, "[SM] Cannot use this command from server console.");
+		ReplyToCommand(client, "[SM] %t", "CallAdmin Console Not Allowed");
 		return Plugin_Handled;
 	}
 
 	if (args < 1)
 	{
-		CPrintToChat(client, "%s sm_calladmin <reason>", CHAT_PREFIX);
+		CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Usage");
 		return Plugin_Handled;
 	}
 
@@ -282,7 +284,7 @@ public Action Command_CallAdmin(int client, int args)
 	if (!sWebhookURL[0])
 	{
 		LogError("[CallAdmin] No webhook found or specified.");
-		CPrintToChat(client, "%s A configuration issue has been detected, can't send the webhook.", CHAT_PREFIX);
+		CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Config Issue");
 		return Plugin_Handled;
 	}
 	
@@ -303,20 +305,20 @@ public Action Command_CallAdmin(int client, int args)
 
 	if (bIsGagged)
 	{
-		CPrintToChat(client, "%s You are not allowed to use {gold}Call Admin {orchid}since you are gagged.", CHAT_PREFIX);
+		CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Gagged");
 		return Plugin_Handled;
 	}
 
 	if (GetAdminFlag(GetUserAdmin(client), Admin_Ban) && !GetAdminFlag(GetUserAdmin(client), Admin_Root))
 	{
-		CPrintToChat(client, "%s You are an admin with the ban flag, why the f*ck do you use that command?", CHAT_PREFIX);
+		CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Admin With Ban Flag");
 		return Plugin_Handled;
 	}
 
 	int cooldownDiff = GetTime() - g_iLastUse[client];
 	if (cooldownDiff < g_cvCooldown.IntValue)
 	{
-		CPrintToChat(client, "%s You are on cooldown, wait {default}%d {orchid}seconds.", CHAT_PREFIX, g_cvCooldown.IntValue - cooldownDiff);
+		CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Cooldown", g_cvCooldown.IntValue - cooldownDiff);
 		return Plugin_Handled;
 	}
 
@@ -346,7 +348,7 @@ public Action Command_CallAdmin(int client, int args)
 
 		if (Admins > AfkAdmins)
 		{
-			CPrintToChat(client, "%s You can't use {gold}CallAdmin {orchid}since there is admins online. Type {red}!admins {orchid}to check currently online admins.", CHAT_PREFIX);
+			CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Admins Online");
 			return Plugin_Handled;
 		}
 	}
@@ -373,7 +375,7 @@ public Action Command_CallAdmin(int client, int args)
 
 			if (GetAdminFlag(GetUserAdmin(i), Admin_Ban))
 			{
-				CPrintToChat(i, "%s {olive}%N {orchid}has called an admin ({default}Reason: %s{orchid})", CHAT_PREFIX, client, sReason);
+				CPrintToChat(i, "%s %t", CHAT_PREFIX, "CallAdmin Admin Notify", client, sReason);
 				if (g_cvDetectionSound.BoolValue)
 				{
 					if (gEV_Type == Engine_CSS || gEV_Type == Engine_TF2)
@@ -639,12 +641,12 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 	if (response.Status != HTTPStatus_OK && response.Status != HTTPStatus_NoContent)
 	{
 		if (retries < g_cvWebhookRetry.IntValue) {
-			CPrintToChat(client, "%s {red}Failed to send your message. Resending it .. (%d/3)", CHAT_PREFIX, retries + 1);
+			CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Resending", retries + 1);
 			PrintToServer("[CallAdmin] Failed to send the webhook (HTTP %d). Resending it .. (%d/%d)", view_as<int>(response.Status), retries + 1, g_cvWebhookRetry.IntValue);
 			SendWebHook(userid, sReason, sWebhookURL, retries + 1);
 			return;
 		} else {
-			CPrintToChat(client, "%s {red}An error has occurred. Your message can't be sent.", CHAT_PREFIX);
+			CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Send Error");
 			if (!g_bNative_ExtDiscord)
 			{
 				LogError("[%s] Failed to send the webhook after %d retries (last HTTP status: %d), aborting.", PLUGIN_NAME, retries, view_as<int>(response.Status));
@@ -665,7 +667,7 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 			g_iLastUse[client] = GetTime();
 
 		LogAction(client, -1, "%L has called an Admin. (Reason: %s)", client, sReason);
-		CPrintToChat(client, "%s Message sent.\nRemember that abuse/spam of {gold}CallAdmin {orchid}will result in a chat block", CHAT_PREFIX);
+		CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Message Sent");
 
 		SetClientCookies(client);
 	}
