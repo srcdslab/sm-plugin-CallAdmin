@@ -63,7 +63,7 @@ public Plugin myinfo =
 	name = PLUGIN_NAME,
 	author = "inGame, maxime1907, .Rushaway",
 	description = "Send a calladmin message to discord",
-	version = "2.3.3",
+	version = "2.3.4",
 	url = "https://github.com/srcdslab/sm-plugin-CallAdmin"
 };
 
@@ -638,10 +638,17 @@ public void OnWebHookExecuted(HTTPResponse response, DataPack pack)
 
 	delete pack;
 
+	// The caller left before the webhook replied: nobody to notify, and a retry needs the caller to rebuild the embed
+	if (!client)
+	{
+		LogMessage("[%s] The caller (userid %d) left before the webhook replied (HTTP %d). (Reason: %s)", PLUGIN_NAME, userid, view_as<int>(response.Status), sReason);
+		return;
+	}
+
 	if (response.Status != HTTPStatus_OK && response.Status != HTTPStatus_NoContent)
 	{
 		if (retries < g_cvWebhookRetry.IntValue) {
-			CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Resending", retries + 1);
+			CPrintToChat(client, "%s %t", CHAT_PREFIX, "CallAdmin Resending", retries + 1, g_cvWebhookRetry.IntValue);
 			PrintToServer("[CallAdmin] Failed to send the webhook (HTTP %d). Resending it .. (%d/%d)", view_as<int>(response.Status), retries + 1, g_cvWebhookRetry.IntValue);
 			SendWebHook(userid, sReason, sWebhookURL, retries + 1);
 			return;
