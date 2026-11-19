@@ -9,6 +9,12 @@
 		"de"		"Dieser Befehl kann nicht in der Serverkonsole verwendet werden."
 		"pt"		"Não é possível usar este comando pelo console do servidor."
 		"chi"		"无法在服务器控制台中使用此命令。"
+		"pl"		"Nie można użyć tej komendy z konsoli serwera."
+		"tr"		"Bu komut sunucu konsolundan kullanılamaz."
+		"it"		"Impossibile usare questo comando dalla console del server."
+		"ua"		"Цю команду не можна використовувати з консолі сервера."
+		"zho"		"無法在伺服器主控台中使用此指令。"
+		"cze"		"Tento příkaz nelze použít z konzole serveru."
 	}
 	"CallAdmin Usage"
 	{
@@ -19,6 +25,12 @@
 		"de"		"Verwendung: sm_calladmin <reason>"
 		"pt"		"Uso: sm_calladmin <reason>"
 		"chi"		"用法：sm_calladmin <reason>"
+		"pl"		"Użycie: sm_calladmin <reason>"
+		"tr"		"Kullanım: sm_calladmin <reason>"
+		"it"		"Uso: sm_calladmin <reason>"
+		"ua"		"Використання: sm_calladmin <reason>"
+		"zho"		"用法：sm_calladmin <reason>"
+		"cze"		"Použití: sm_calladmin <reason>"
 	}
 	"CallAdmin Config Issue"
 	{
@@ -29,6 +41,12 @@
 		"de"		"Ein Konfigurationsproblem wurde erkannt, der Webhook kann nicht gesendet werden."
 		"pt"		"Foi detectado um problema de configuração, não é possível enviar o webhook."
 		"chi"		"检测到配置问题，无法发送 webhook。"
+		"pl"		"Wykryto problem z konfiguracją, nie można wysłać webhooka."
+		"tr"		"Bir yapılandırma sorunu tespit edildi, webhook gönderilemiyor."
+		"it"		"È stato rilevato un problema di configurazione, impossibile inviare il webhook."
+		"ua"		"Виявлено проблему з конфігурацією, неможливо надіслати вебхук."
+		"zho"		"偵測到設定問題，無法傳送 webhook。"
+		"cze"		"Byl zjištěn problém s konfigurací, webhook nelze odeslat."
 	}
 	"CallAdmin Gagged"
 	{
@@ -39,6 +57,12 @@
 		"de"		"Du darfst {gold}Call Admin {orchid}nicht benutzen, da du gegaggt bist."
 		"pt"		"Você não pode usar o {gold}Call Admin {orchid}porque está gagado."
 		"chi"		"你已被禁言，无法使用 {gold}Call Admin{orchid}。"
+		"pl"		"Nie możesz używać {gold}Call Admin {orchid}, ponieważ masz gaga."
+		"tr"		"Susturulduğun için {gold}Call Admin {orchid}kullanamazsın."
+		"it"		"Non puoi usare {gold}Call Admin {orchid}perché sei in gag."
+		"ua"		"Ви не можете використовувати {gold}Call Admin{orchid}, бо вас заглушено."
+		"zho"		"你已被禁言，無法使用 {gold}Call Admin{orchid}。"
+		"cze"		"Nemůžeš použít {gold}Call Admin {orchid}, protože máš gag."
 	}
 	"CallAdmin Admin With Ban Flag"
 	{
@@ -49,6 +73,12 @@
 		"de"		"Du bist Admin mit dem Ban-Flag, du brauchst diesen Befehl nicht."
 		"pt"		"Você é admin com a flag de ban, não precisa usar esse comando."
 		"chi"		"你是拥有封禁权限的管理员，无需使用此命令。"
+		"pl"		"Jesteś adminem z flagą bana, nie musisz używać tej komendy."
+		"tr"		"Ban yetkisine sahip bir adminsin, bu komutu kullanmana gerek yok."
+		"it"		"Sei un admin con il flag ban, non hai bisogno di usare questo comando."
+		"ua"		"Ви адмін із прапором бана, вам не потрібно використовувати цю команду."
+		"zho"		"你是擁有封鎖權限的管理員，無需使用此指令。"
+		"cze"		"Jsi admin s flagem banu, tento příkaz nepotřebuješ."
 	}
 	"CallAdmin Cooldown"
 	{
@@ -60,6 +90,12 @@
 		"de"		"Du hast noch Abklingzeit, warte {default}{1} {orchid}Sekunden."
 		"pt"		"Você está em cooldown, aguarde {default}{1} {orchid}segundos."
 		"chi"		"冷却中，请等待 {default}{1} {orchid}秒。"
+		"pl"		"Odczekaj jeszcze {default}{1} {orchid}sek. (cooldown)."
+		"tr"		"Bekleme süresindesin, {default}{1} {orchid}saniye bekle."
+		"it"		"Sei in cooldown, attendi {default}{1} {orchid}secondi."
+		"ua"		"Перезарядка, зачекайте {default}{1} {orchid}сек."
+		"zho"		"冷卻中，請等待 {default}{1} {orchid}秒。"
+		"cze"		"Máš cooldown, počkej {default}{1} {orchid}sekund."
 	}
 	"CallAdmin Admins Online"
 	{
@@ -70,6 +106,12 @@
 		"de"		"Du kannst {gold}CallAdmin {orchid}nicht benutzen, da Admins online sind. Gib {red}!admins {orchid}ein, um sie anzuzeigen."
 		"pt"		"Você não pode usar o {gold}CallAdmin {orchid}porque há admins online. Digite {red}!admins {orchid}para ver os admins online."
 		"chi"		"当前有管理员在线，你无法使用 {gold}CallAdmin{orchid}。输入 {red}!admins {orchid}查看在线管理员。"
+		"pl"		"Nie możesz używać {gold}CallAdmin {orchid}, ponieważ na serwerze są admini. Wpisz {red}!admins {orchid}, aby zobaczyć adminów online."
+		"tr"		"Çevrimiçi adminler olduğu için {gold}CallAdmin {orchid}kullanamazsın. Çevrimiçi adminleri görmek için {red}!admins {orchid}yaz."
+		"it"		"Non puoi usare {gold}CallAdmin {orchid}perché ci sono admin online. Scrivi {red}!admins {orchid}per vedere gli admin online."
+		"ua"		"Не можна використовувати {gold}CallAdmin{orchid}: на сервері є адміни. Введіть {red}!admins{orchid}, щоб їх побачити."
+		"zho"		"目前有管理員在線，你無法使用 {gold}CallAdmin{orchid}。輸入 {red}!admins {orchid}查看在線管理員。"
+		"cze"		"Nemůžeš použít {gold}CallAdmin {orchid}, protože jsou online admini. Napiš {red}!admins {orchid}pro zobrazení online adminů."
 	}
 	"CallAdmin Admin Notify"
 	{
@@ -81,6 +123,12 @@
 		"de"		"{olive}{1} {orchid}hat einen Admin gerufen ({default}Grund: {2}{orchid})"
 		"pt"		"{olive}{1} {orchid}chamou um admin ({default}Motivo: {2}{orchid})"
 		"chi"		"{olive}{1} {orchid}呼叫了管理员（{default}原因：{2}{orchid}）"
+		"pl"		"{olive}{1} {orchid}wezwał admina ({default}Powód: {2}{orchid})"
+		"tr"		"{olive}{1} {orchid}bir admin çağırdı ({default}Sebep: {2}{orchid})"
+		"it"		"{olive}{1} {orchid}ha chiamato un admin ({default}Motivo: {2}{orchid})"
+		"ua"		"{olive}{1} {orchid}викликав адміна ({default}Причина: {2}{orchid})"
+		"zho"		"{olive}{1} {orchid}呼叫了管理員（{default}原因：{2}{orchid}）"
+		"cze"		"{olive}{1} {orchid}zavolal admina ({default}Důvod: {2}{orchid})"
 	}
 	"CallAdmin Resending"
 	{
@@ -92,6 +140,12 @@
 		"de"		"{red}Deine Nachricht konnte nicht gesendet werden. Erneuter Versuch... ({1}/{2})"
 		"pt"		"{red}Falha ao enviar sua mensagem. Reenviando... ({1}/{2})"
 		"chi"		"{red}消息发送失败，正在重新发送……（{1}/{2}）"
+		"pl"		"{red}Nie udało się wysłać wiadomości. Ponawianie... ({1}/{2})"
+		"tr"		"{red}Mesajın gönderilemedi. Yeniden gönderiliyor... ({1}/{2})"
+		"it"		"{red}Invio del messaggio non riuscito. Nuovo tentativo... ({1}/{2})"
+		"ua"		"{red}Не вдалося надіслати повідомлення. Повторне надсилання... ({1}/{2})"
+		"zho"		"{red}訊息傳送失敗，正在重新傳送……（{1}/{2}）"
+		"cze"		"{red}Zprávu se nepodařilo odeslat. Odesílám znovu... ({1}/{2})"
 	}
 	"CallAdmin Send Error"
 	{
@@ -102,6 +156,12 @@
 		"de"		"{red}Ein Fehler ist aufgetreten. Deine Nachricht kann nicht gesendet werden."
 		"pt"		"{red}Ocorreu um erro. Sua mensagem não pôde ser enviada."
 		"chi"		"{red}发生错误，你的消息无法发送。"
+		"pl"		"{red}Wystąpił błąd. Twojej wiadomości nie można wysłać."
+		"tr"		"{red}Bir hata oluştu. Mesajın gönderilemiyor."
+		"it"		"{red}Si è verificato un errore. Impossibile inviare il messaggio."
+		"ua"		"{red}Сталася помилка. Ваше повідомлення не може бути надіслано."
+		"zho"		"{red}發生錯誤，你的訊息無法傳送。"
+		"cze"		"{red}Došlo k chybě. Zprávu nelze odeslat."
 	}
 	"CallAdmin Message Sent"
 	{
@@ -112,5 +172,11 @@
 		"de"		"Nachricht gesendet.\nDenk daran, dass Missbrauch/Spam von {gold}CallAdmin {orchid}zu einer Chatsperre führt"
 		"pt"		"Mensagem enviada.\nLembre-se de que abuso/spam do {gold}CallAdmin {orchid}resultará em bloqueio do chat"
 		"chi"		"消息已发送。\n请注意，滥用/刷屏 {gold}CallAdmin {orchid}将导致禁言"
+		"pl"		"Wiadomość wysłana.\nPamiętaj, że nadużywanie/spamowanie {gold}CallAdmin {orchid}skutkuje blokadą czatu"
+		"tr"		"Mesaj gönderildi.\n{gold}CallAdmin {orchid}kötüye kullanımı/spamı sohbet engeliyle sonuçlanır"
+		"it"		"Messaggio inviato.\nRicorda che l'abuso/spam di {gold}CallAdmin {orchid}comporterà il blocco della chat"
+		"ua"		"Повідомлення надіслано.\nПам'ятайте, що зловживання/спам {gold}CallAdmin {orchid}призведе до блокування чату"
+		"zho"		"訊息已傳送。\n請注意，濫用/洗頻 {gold}CallAdmin {orchid}將導致禁言"
+		"cze"		"Zpráva odeslána.\nPamatuj, že zneužívání/spam {gold}CallAdmin {orchid}vede k zablokování chatu"
 	}
 }
